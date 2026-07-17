@@ -1,0 +1,1894 @@
+{
+  "bench": "optintervals",
+  "cap_label": "2cpu-4g",
+  "unix_time": 1784309223.4200091,
+  "rows_per_append": 5000,
+  "payload_bytes": 1024,
+  "n_appends": 100,
+  "results": [
+    {
+      "cadence": 0,
+      "series": [
+        {
+          "rows": 5000,
+          "bytes": 541179862,
+          "fragments": 101,
+          "phase": "append"
+        },
+        {
+          "rows": 10000,
+          "bytes": 546507902,
+          "fragments": 102,
+          "phase": "append"
+        },
+        {
+          "rows": 15000,
+          "bytes": 551850998,
+          "fragments": 103,
+          "phase": "append"
+        },
+        {
+          "rows": 20000,
+          "bytes": 557194175,
+          "fragments": 104,
+          "phase": "append"
+        },
+        {
+          "rows": 25000,
+          "bytes": 562537432,
+          "fragments": 105,
+          "phase": "append"
+        },
+        {
+          "rows": 30000,
+          "bytes": 567880769,
+          "fragments": 106,
+          "phase": "append"
+        },
+        {
+          "rows": 35000,
+          "bytes": 573224186,
+          "fragments": 107,
+          "phase": "append"
+        },
+        {
+          "rows": 40000,
+          "bytes": 578567683,
+          "fragments": 108,
+          "phase": "append"
+        },
+        {
+          "rows": 45000,
+          "bytes": 583911260,
+          "fragments": 109,
+          "phase": "append"
+        },
+        {
+          "rows": 50000,
+          "bytes": 589254917,
+          "fragments": 110,
+          "phase": "append"
+        },
+        {
+          "rows": 55000,
+          "bytes": 594598653,
+          "fragments": 111,
+          "phase": "append"
+        },
+        {
+          "rows": 60000,
+          "bytes": 599942469,
+          "fragments": 112,
+          "phase": "append"
+        },
+        {
+          "rows": 65000,
+          "bytes": 605286365,
+          "fragments": 113,
+          "phase": "append"
+        },
+        {
+          "rows": 70000,
+          "bytes": 610630342,
+          "fragments": 114,
+          "phase": "append"
+        },
+        {
+          "rows": 75000,
+          "bytes": 615974399,
+          "fragments": 115,
+          "phase": "append"
+        },
+        {
+          "rows": 80000,
+          "bytes": 621318536,
+          "fragments": 116,
+          "phase": "append"
+        },
+        {
+          "rows": 85000,
+          "bytes": 626662753,
+          "fragments": 117,
+          "phase": "append"
+        },
+        {
+          "rows": 90000,
+          "bytes": 632007050,
+          "fragments": 118,
+          "phase": "append"
+        },
+        {
+          "rows": 95000,
+          "bytes": 637351427,
+          "fragments": 119,
+          "phase": "append"
+        },
+        {
+          "rows": 100000,
+          "bytes": 642695884,
+          "fragments": 120,
+          "phase": "append"
+        },
+        {
+          "rows": 105000,
+          "bytes": 648055396,
+          "fragments": 121,
+          "phase": "append"
+        },
+        {
+          "rows": 110000,
+          "bytes": 653414988,
+          "fragments": 122,
+          "phase": "append"
+        },
+        {
+          "rows": 115000,
+          "bytes": 658774660,
+          "fragments": 123,
+          "phase": "append"
+        },
+        {
+          "rows": 120000,
+          "bytes": 664134413,
+          "fragments": 124,
+          "phase": "append"
+        },
+        {
+          "rows": 125000,
+          "bytes": 669494246,
+          "fragments": 125,
+          "phase": "append"
+        },
+        {
+          "rows": 130000,
+          "bytes": 674854159,
+          "fragments": 126,
+          "phase": "append"
+        },
+        {
+          "rows": 135000,
+          "bytes": 680214152,
+          "fragments": 127,
+          "phase": "append"
+        },
+        {
+          "rows": 140000,
+          "bytes": 685574226,
+          "fragments": 128,
+          "phase": "append"
+        },
+        {
+          "rows": 145000,
+          "bytes": 690934381,
+          "fragments": 129,
+          "phase": "append"
+        },
+        {
+          "rows": 150000,
+          "bytes": 696294618,
+          "fragments": 130,
+          "phase": "append"
+        },
+        {
+          "rows": 155000,
+          "bytes": 701654935,
+          "fragments": 131,
+          "phase": "append"
+        },
+        {
+          "rows": 160000,
+          "bytes": 707015333,
+          "fragments": 132,
+          "phase": "append"
+        },
+        {
+          "rows": 165000,
+          "bytes": 712375812,
+          "fragments": 133,
+          "phase": "append"
+        },
+        {
+          "rows": 170000,
+          "bytes": 717736373,
+          "fragments": 134,
+          "phase": "append"
+        },
+        {
+          "rows": 175000,
+          "bytes": 723097015,
+          "fragments": 135,
+          "phase": "append"
+        },
+        {
+          "rows": 180000,
+          "bytes": 728457738,
+          "fragments": 136,
+          "phase": "append"
+        },
+        {
+          "rows": 185000,
+          "bytes": 733818542,
+          "fragments": 137,
+          "phase": "append"
+        },
+        {
+          "rows": 190000,
+          "bytes": 739179427,
+          "fragments": 138,
+          "phase": "append"
+        },
+        {
+          "rows": 195000,
+          "bytes": 744540393,
+          "fragments": 139,
+          "phase": "append"
+        },
+        {
+          "rows": 200000,
+          "bytes": 749901440,
+          "fragments": 140,
+          "phase": "append"
+        },
+        {
+          "rows": 205000,
+          "bytes": 755262567,
+          "fragments": 141,
+          "phase": "append"
+        },
+        {
+          "rows": 210000,
+          "bytes": 760623775,
+          "fragments": 142,
+          "phase": "append"
+        },
+        {
+          "rows": 215000,
+          "bytes": 765985065,
+          "fragments": 143,
+          "phase": "append"
+        },
+        {
+          "rows": 220000,
+          "bytes": 771346436,
+          "fragments": 144,
+          "phase": "append"
+        },
+        {
+          "rows": 225000,
+          "bytes": 776707888,
+          "fragments": 145,
+          "phase": "append"
+        },
+        {
+          "rows": 230000,
+          "bytes": 782069421,
+          "fragments": 146,
+          "phase": "append"
+        },
+        {
+          "rows": 235000,
+          "bytes": 787431035,
+          "fragments": 147,
+          "phase": "append"
+        },
+        {
+          "rows": 240000,
+          "bytes": 792792730,
+          "fragments": 148,
+          "phase": "append"
+        },
+        {
+          "rows": 245000,
+          "bytes": 798154506,
+          "fragments": 149,
+          "phase": "append"
+        },
+        {
+          "rows": 250000,
+          "bytes": 803516363,
+          "fragments": 150,
+          "phase": "append"
+        },
+        {
+          "rows": 255000,
+          "bytes": 808878300,
+          "fragments": 151,
+          "phase": "append"
+        },
+        {
+          "rows": 260000,
+          "bytes": 814240318,
+          "fragments": 152,
+          "phase": "append"
+        },
+        {
+          "rows": 265000,
+          "bytes": 819602418,
+          "fragments": 153,
+          "phase": "append"
+        },
+        {
+          "rows": 270000,
+          "bytes": 824964599,
+          "fragments": 154,
+          "phase": "append"
+        },
+        {
+          "rows": 275000,
+          "bytes": 830326861,
+          "fragments": 155,
+          "phase": "append"
+        },
+        {
+          "rows": 280000,
+          "bytes": 835689204,
+          "fragments": 156,
+          "phase": "append"
+        },
+        {
+          "rows": 285000,
+          "bytes": 841051628,
+          "fragments": 157,
+          "phase": "append"
+        },
+        {
+          "rows": 290000,
+          "bytes": 846414133,
+          "fragments": 158,
+          "phase": "append"
+        },
+        {
+          "rows": 295000,
+          "bytes": 851776719,
+          "fragments": 159,
+          "phase": "append"
+        },
+        {
+          "rows": 300000,
+          "bytes": 857139386,
+          "fragments": 160,
+          "phase": "append"
+        },
+        {
+          "rows": 305000,
+          "bytes": 862502133,
+          "fragments": 161,
+          "phase": "append"
+        },
+        {
+          "rows": 310000,
+          "bytes": 867864961,
+          "fragments": 162,
+          "phase": "append"
+        },
+        {
+          "rows": 315000,
+          "bytes": 873227871,
+          "fragments": 163,
+          "phase": "append"
+        },
+        {
+          "rows": 320000,
+          "bytes": 878590862,
+          "fragments": 164,
+          "phase": "append"
+        },
+        {
+          "rows": 325000,
+          "bytes": 883953934,
+          "fragments": 165,
+          "phase": "append"
+        },
+        {
+          "rows": 330000,
+          "bytes": 889317087,
+          "fragments": 166,
+          "phase": "append"
+        },
+        {
+          "rows": 335000,
+          "bytes": 894680321,
+          "fragments": 167,
+          "phase": "append"
+        },
+        {
+          "rows": 340000,
+          "bytes": 900043636,
+          "fragments": 168,
+          "phase": "append"
+        },
+        {
+          "rows": 345000,
+          "bytes": 905407032,
+          "fragments": 169,
+          "phase": "append"
+        },
+        {
+          "rows": 350000,
+          "bytes": 910770509,
+          "fragments": 170,
+          "phase": "append"
+        },
+        {
+          "rows": 355000,
+          "bytes": 916134066,
+          "fragments": 171,
+          "phase": "append"
+        },
+        {
+          "rows": 360000,
+          "bytes": 921497704,
+          "fragments": 172,
+          "phase": "append"
+        },
+        {
+          "rows": 365000,
+          "bytes": 926861424,
+          "fragments": 173,
+          "phase": "append"
+        },
+        {
+          "rows": 370000,
+          "bytes": 932225225,
+          "fragments": 174,
+          "phase": "append"
+        },
+        {
+          "rows": 375000,
+          "bytes": 937589107,
+          "fragments": 175,
+          "phase": "append"
+        },
+        {
+          "rows": 380000,
+          "bytes": 942953070,
+          "fragments": 176,
+          "phase": "append"
+        },
+        {
+          "rows": 385000,
+          "bytes": 948317114,
+          "fragments": 177,
+          "phase": "append"
+        },
+        {
+          "rows": 390000,
+          "bytes": 953681239,
+          "fragments": 178,
+          "phase": "append"
+        },
+        {
+          "rows": 395000,
+          "bytes": 959045445,
+          "fragments": 179,
+          "phase": "append"
+        },
+        {
+          "rows": 400000,
+          "bytes": 964409731,
+          "fragments": 180,
+          "phase": "append"
+        },
+        {
+          "rows": 405000,
+          "bytes": 969774098,
+          "fragments": 181,
+          "phase": "append"
+        },
+        {
+          "rows": 410000,
+          "bytes": 975138547,
+          "fragments": 182,
+          "phase": "append"
+        },
+        {
+          "rows": 415000,
+          "bytes": 980503077,
+          "fragments": 183,
+          "phase": "append"
+        },
+        {
+          "rows": 420000,
+          "bytes": 985867688,
+          "fragments": 184,
+          "phase": "append"
+        },
+        {
+          "rows": 425000,
+          "bytes": 991232380,
+          "fragments": 185,
+          "phase": "append"
+        },
+        {
+          "rows": 430000,
+          "bytes": 996597153,
+          "fragments": 186,
+          "phase": "append"
+        },
+        {
+          "rows": 435000,
+          "bytes": 1001962007,
+          "fragments": 187,
+          "phase": "append"
+        },
+        {
+          "rows": 440000,
+          "bytes": 1007326942,
+          "fragments": 188,
+          "phase": "append"
+        },
+        {
+          "rows": 445000,
+          "bytes": 1012691957,
+          "fragments": 189,
+          "phase": "append"
+        },
+        {
+          "rows": 450000,
+          "bytes": 1018057053,
+          "fragments": 190,
+          "phase": "append"
+        },
+        {
+          "rows": 455000,
+          "bytes": 1023422230,
+          "fragments": 191,
+          "phase": "append"
+        },
+        {
+          "rows": 460000,
+          "bytes": 1028787489,
+          "fragments": 192,
+          "phase": "append"
+        },
+        {
+          "rows": 465000,
+          "bytes": 1034152829,
+          "fragments": 193,
+          "phase": "append"
+        },
+        {
+          "rows": 470000,
+          "bytes": 1039518250,
+          "fragments": 194,
+          "phase": "append"
+        },
+        {
+          "rows": 475000,
+          "bytes": 1044883752,
+          "fragments": 195,
+          "phase": "append"
+        },
+        {
+          "rows": 480000,
+          "bytes": 1050249335,
+          "fragments": 196,
+          "phase": "append"
+        },
+        {
+          "rows": 485000,
+          "bytes": 1055614999,
+          "fragments": 197,
+          "phase": "append"
+        },
+        {
+          "rows": 490000,
+          "bytes": 1060980744,
+          "fragments": 198,
+          "phase": "append"
+        },
+        {
+          "rows": 495000,
+          "bytes": 1066346569,
+          "fragments": 199,
+          "phase": "append"
+        },
+        {
+          "rows": 500000,
+          "bytes": 1071712475,
+          "fragments": 200,
+          "phase": "append"
+        }
+      ],
+      "final_bytes": 1071712475,
+      "final_fragments": 200,
+      "logical_bytes": 512000000
+    },
+    {
+      "cadence": 20,
+      "series": [
+        {
+          "rows": 5000,
+          "bytes": 5325063,
+          "fragments": 1,
+          "phase": "append"
+        },
+        {
+          "rows": 10000,
+          "bytes": 10653102,
+          "fragments": 2,
+          "phase": "append"
+        },
+        {
+          "rows": 15000,
+          "bytes": 15996197,
+          "fragments": 3,
+          "phase": "append"
+        },
+        {
+          "rows": 20000,
+          "bytes": 21339372,
+          "fragments": 4,
+          "phase": "append"
+        },
+        {
+          "rows": 25000,
+          "bytes": 26682627,
+          "fragments": 5,
+          "phase": "append"
+        },
+        {
+          "rows": 30000,
+          "bytes": 32025962,
+          "fragments": 6,
+          "phase": "append"
+        },
+        {
+          "rows": 35000,
+          "bytes": 37369377,
+          "fragments": 7,
+          "phase": "append"
+        },
+        {
+          "rows": 40000,
+          "bytes": 42712872,
+          "fragments": 8,
+          "phase": "append"
+        },
+        {
+          "rows": 45000,
+          "bytes": 48056446,
+          "fragments": 9,
+          "phase": "append"
+        },
+        {
+          "rows": 50000,
+          "bytes": 53400100,
+          "fragments": 10,
+          "phase": "append"
+        },
+        {
+          "rows": 55000,
+          "bytes": 58743835,
+          "fragments": 11,
+          "phase": "append"
+        },
+        {
+          "rows": 60000,
+          "bytes": 64087651,
+          "fragments": 12,
+          "phase": "append"
+        },
+        {
+          "rows": 65000,
+          "bytes": 69431547,
+          "fragments": 13,
+          "phase": "append"
+        },
+        {
+          "rows": 70000,
+          "bytes": 74775523,
+          "fragments": 14,
+          "phase": "append"
+        },
+        {
+          "rows": 75000,
+          "bytes": 80119579,
+          "fragments": 15,
+          "phase": "append"
+        },
+        {
+          "rows": 80000,
+          "bytes": 85463715,
+          "fragments": 16,
+          "phase": "append"
+        },
+        {
+          "rows": 85000,
+          "bytes": 90807931,
+          "fragments": 17,
+          "phase": "append"
+        },
+        {
+          "rows": 90000,
+          "bytes": 96152227,
+          "fragments": 18,
+          "phase": "append"
+        },
+        {
+          "rows": 95000,
+          "bytes": 101496603,
+          "fragments": 19,
+          "phase": "append"
+        },
+        {
+          "rows": 100000,
+          "bytes": 106841057,
+          "fragments": 20,
+          "phase": "append"
+        },
+        {
+          "rows": 105000,
+          "bytes": 112200568,
+          "fragments": 21,
+          "phase": "append"
+        },
+        {
+          "rows": 105000,
+          "bytes": 224330006,
+          "fragments": 22,
+          "phase": "compact_peak"
+        },
+        {
+          "rows": 105000,
+          "bytes": 112127232,
+          "fragments": 1,
+          "phase": "post_cleanup"
+        },
+        {
+          "rows": 110000,
+          "bytes": 117485227,
+          "fragments": 2,
+          "phase": "append"
+        },
+        {
+          "rows": 115000,
+          "bytes": 122843302,
+          "fragments": 3,
+          "phase": "append"
+        },
+        {
+          "rows": 120000,
+          "bytes": 128201457,
+          "fragments": 4,
+          "phase": "append"
+        },
+        {
+          "rows": 125000,
+          "bytes": 133559692,
+          "fragments": 5,
+          "phase": "append"
+        },
+        {
+          "rows": 130000,
+          "bytes": 138918006,
+          "fragments": 6,
+          "phase": "append"
+        },
+        {
+          "rows": 135000,
+          "bytes": 144276400,
+          "fragments": 7,
+          "phase": "append"
+        },
+        {
+          "rows": 140000,
+          "bytes": 149634874,
+          "fragments": 8,
+          "phase": "append"
+        },
+        {
+          "rows": 145000,
+          "bytes": 154993429,
+          "fragments": 9,
+          "phase": "append"
+        },
+        {
+          "rows": 150000,
+          "bytes": 160352064,
+          "fragments": 10,
+          "phase": "append"
+        },
+        {
+          "rows": 155000,
+          "bytes": 165710779,
+          "fragments": 11,
+          "phase": "append"
+        },
+        {
+          "rows": 160000,
+          "bytes": 171069574,
+          "fragments": 12,
+          "phase": "append"
+        },
+        {
+          "rows": 165000,
+          "bytes": 176428449,
+          "fragments": 13,
+          "phase": "append"
+        },
+        {
+          "rows": 170000,
+          "bytes": 181787404,
+          "fragments": 14,
+          "phase": "append"
+        },
+        {
+          "rows": 175000,
+          "bytes": 187146439,
+          "fragments": 15,
+          "phase": "append"
+        },
+        {
+          "rows": 180000,
+          "bytes": 192505554,
+          "fragments": 16,
+          "phase": "append"
+        },
+        {
+          "rows": 185000,
+          "bytes": 197864748,
+          "fragments": 17,
+          "phase": "append"
+        },
+        {
+          "rows": 190000,
+          "bytes": 203224022,
+          "fragments": 18,
+          "phase": "append"
+        },
+        {
+          "rows": 195000,
+          "bytes": 208583376,
+          "fragments": 19,
+          "phase": "append"
+        },
+        {
+          "rows": 200000,
+          "bytes": 213942811,
+          "fragments": 20,
+          "phase": "append"
+        },
+        {
+          "rows": 205000,
+          "bytes": 219302326,
+          "fragments": 21,
+          "phase": "append"
+        },
+        {
+          "rows": 205000,
+          "bytes": 438532891,
+          "fragments": 22,
+          "phase": "compact_peak"
+        },
+        {
+          "rows": 205000,
+          "bytes": 219228356,
+          "fragments": 1,
+          "phase": "post_cleanup"
+        },
+        {
+          "rows": 210000,
+          "bytes": 224586350,
+          "fragments": 2,
+          "phase": "append"
+        },
+        {
+          "rows": 215000,
+          "bytes": 229944424,
+          "fragments": 3,
+          "phase": "append"
+        },
+        {
+          "rows": 220000,
+          "bytes": 235302579,
+          "fragments": 4,
+          "phase": "append"
+        },
+        {
+          "rows": 225000,
+          "bytes": 240660814,
+          "fragments": 5,
+          "phase": "append"
+        },
+        {
+          "rows": 230000,
+          "bytes": 246019129,
+          "fragments": 6,
+          "phase": "append"
+        },
+        {
+          "rows": 235000,
+          "bytes": 251377524,
+          "fragments": 7,
+          "phase": "append"
+        },
+        {
+          "rows": 240000,
+          "bytes": 256735999,
+          "fragments": 8,
+          "phase": "append"
+        },
+        {
+          "rows": 245000,
+          "bytes": 262094554,
+          "fragments": 9,
+          "phase": "append"
+        },
+        {
+          "rows": 250000,
+          "bytes": 267453189,
+          "fragments": 10,
+          "phase": "append"
+        },
+        {
+          "rows": 255000,
+          "bytes": 272811904,
+          "fragments": 11,
+          "phase": "append"
+        },
+        {
+          "rows": 260000,
+          "bytes": 278170699,
+          "fragments": 12,
+          "phase": "append"
+        },
+        {
+          "rows": 265000,
+          "bytes": 283529573,
+          "fragments": 13,
+          "phase": "append"
+        },
+        {
+          "rows": 270000,
+          "bytes": 288888527,
+          "fragments": 14,
+          "phase": "append"
+        },
+        {
+          "rows": 275000,
+          "bytes": 294247561,
+          "fragments": 15,
+          "phase": "append"
+        },
+        {
+          "rows": 280000,
+          "bytes": 299606676,
+          "fragments": 16,
+          "phase": "append"
+        },
+        {
+          "rows": 285000,
+          "bytes": 304965871,
+          "fragments": 17,
+          "phase": "append"
+        },
+        {
+          "rows": 290000,
+          "bytes": 310325146,
+          "fragments": 18,
+          "phase": "append"
+        },
+        {
+          "rows": 295000,
+          "bytes": 315684501,
+          "fragments": 19,
+          "phase": "append"
+        },
+        {
+          "rows": 300000,
+          "bytes": 321043936,
+          "fragments": 20,
+          "phase": "append"
+        },
+        {
+          "rows": 305000,
+          "bytes": 326403451,
+          "fragments": 21,
+          "phase": "append"
+        },
+        {
+          "rows": 305000,
+          "bytes": 652736971,
+          "fragments": 23,
+          "phase": "compact_peak"
+        },
+        {
+          "rows": 305000,
+          "bytes": 326331311,
+          "fragments": 2,
+          "phase": "post_cleanup"
+        },
+        {
+          "rows": 310000,
+          "bytes": 331689387,
+          "fragments": 3,
+          "phase": "append"
+        },
+        {
+          "rows": 315000,
+          "bytes": 337047543,
+          "fragments": 4,
+          "phase": "append"
+        },
+        {
+          "rows": 320000,
+          "bytes": 342405779,
+          "fragments": 5,
+          "phase": "append"
+        },
+        {
+          "rows": 325000,
+          "bytes": 347764095,
+          "fragments": 6,
+          "phase": "append"
+        },
+        {
+          "rows": 330000,
+          "bytes": 353122490,
+          "fragments": 7,
+          "phase": "append"
+        },
+        {
+          "rows": 335000,
+          "bytes": 358480965,
+          "fragments": 8,
+          "phase": "append"
+        },
+        {
+          "rows": 340000,
+          "bytes": 363839520,
+          "fragments": 9,
+          "phase": "append"
+        },
+        {
+          "rows": 345000,
+          "bytes": 369198156,
+          "fragments": 10,
+          "phase": "append"
+        },
+        {
+          "rows": 350000,
+          "bytes": 374556872,
+          "fragments": 11,
+          "phase": "append"
+        },
+        {
+          "rows": 355000,
+          "bytes": 379915668,
+          "fragments": 12,
+          "phase": "append"
+        },
+        {
+          "rows": 360000,
+          "bytes": 385274544,
+          "fragments": 13,
+          "phase": "append"
+        },
+        {
+          "rows": 365000,
+          "bytes": 390633500,
+          "fragments": 14,
+          "phase": "append"
+        },
+        {
+          "rows": 370000,
+          "bytes": 395992536,
+          "fragments": 15,
+          "phase": "append"
+        },
+        {
+          "rows": 375000,
+          "bytes": 401351652,
+          "fragments": 16,
+          "phase": "append"
+        },
+        {
+          "rows": 380000,
+          "bytes": 406710848,
+          "fragments": 17,
+          "phase": "append"
+        },
+        {
+          "rows": 385000,
+          "bytes": 412070124,
+          "fragments": 18,
+          "phase": "append"
+        },
+        {
+          "rows": 390000,
+          "bytes": 417429479,
+          "fragments": 19,
+          "phase": "append"
+        },
+        {
+          "rows": 395000,
+          "bytes": 422788914,
+          "fragments": 20,
+          "phase": "append"
+        },
+        {
+          "rows": 400000,
+          "bytes": 428148429,
+          "fragments": 21,
+          "phase": "append"
+        },
+        {
+          "rows": 405000,
+          "bytes": 433508025,
+          "fragments": 22,
+          "phase": "append"
+        },
+        {
+          "rows": 405000,
+          "bytes": 599521633,
+          "fragments": 23,
+          "phase": "compact_peak"
+        },
+        {
+          "rows": 405000,
+          "bytes": 433432155,
+          "fragments": 2,
+          "phase": "post_cleanup"
+        },
+        {
+          "rows": 410000,
+          "bytes": 438790231,
+          "fragments": 3,
+          "phase": "append"
+        },
+        {
+          "rows": 415000,
+          "bytes": 444148387,
+          "fragments": 4,
+          "phase": "append"
+        },
+        {
+          "rows": 420000,
+          "bytes": 449506623,
+          "fragments": 5,
+          "phase": "append"
+        },
+        {
+          "rows": 425000,
+          "bytes": 454864938,
+          "fragments": 6,
+          "phase": "append"
+        },
+        {
+          "rows": 430000,
+          "bytes": 460223333,
+          "fragments": 7,
+          "phase": "append"
+        },
+        {
+          "rows": 435000,
+          "bytes": 465581808,
+          "fragments": 8,
+          "phase": "append"
+        },
+        {
+          "rows": 440000,
+          "bytes": 470940364,
+          "fragments": 9,
+          "phase": "append"
+        },
+        {
+          "rows": 445000,
+          "bytes": 476299000,
+          "fragments": 10,
+          "phase": "append"
+        },
+        {
+          "rows": 450000,
+          "bytes": 481657716,
+          "fragments": 11,
+          "phase": "append"
+        },
+        {
+          "rows": 455000,
+          "bytes": 487016512,
+          "fragments": 12,
+          "phase": "append"
+        },
+        {
+          "rows": 460000,
+          "bytes": 492375388,
+          "fragments": 13,
+          "phase": "append"
+        },
+        {
+          "rows": 465000,
+          "bytes": 497734345,
+          "fragments": 14,
+          "phase": "append"
+        },
+        {
+          "rows": 470000,
+          "bytes": 503093382,
+          "fragments": 15,
+          "phase": "append"
+        },
+        {
+          "rows": 475000,
+          "bytes": 508452499,
+          "fragments": 16,
+          "phase": "append"
+        },
+        {
+          "rows": 480000,
+          "bytes": 513811695,
+          "fragments": 17,
+          "phase": "append"
+        },
+        {
+          "rows": 485000,
+          "bytes": 519170971,
+          "fragments": 18,
+          "phase": "append"
+        },
+        {
+          "rows": 490000,
+          "bytes": 524530327,
+          "fragments": 19,
+          "phase": "append"
+        },
+        {
+          "rows": 495000,
+          "bytes": 529889764,
+          "fragments": 20,
+          "phase": "append"
+        },
+        {
+          "rows": 500000,
+          "bytes": 535249281,
+          "fragments": 21,
+          "phase": "append"
+        }
+      ],
+      "final_bytes": 535249281,
+      "final_fragments": 21,
+      "logical_bytes": 512000000
+    },
+    {
+      "cadence": 50,
+      "series": [
+        {
+          "rows": 5000,
+          "bytes": 540748908,
+          "fragments": 52,
+          "phase": "append"
+        },
+        {
+          "rows": 10000,
+          "bytes": 546076949,
+          "fragments": 53,
+          "phase": "append"
+        },
+        {
+          "rows": 15000,
+          "bytes": 551420046,
+          "fragments": 54,
+          "phase": "append"
+        },
+        {
+          "rows": 20000,
+          "bytes": 556763223,
+          "fragments": 55,
+          "phase": "append"
+        },
+        {
+          "rows": 25000,
+          "bytes": 562106480,
+          "fragments": 56,
+          "phase": "append"
+        },
+        {
+          "rows": 30000,
+          "bytes": 567449817,
+          "fragments": 57,
+          "phase": "append"
+        },
+        {
+          "rows": 35000,
+          "bytes": 572793233,
+          "fragments": 58,
+          "phase": "append"
+        },
+        {
+          "rows": 40000,
+          "bytes": 578136729,
+          "fragments": 59,
+          "phase": "append"
+        },
+        {
+          "rows": 45000,
+          "bytes": 583480305,
+          "fragments": 60,
+          "phase": "append"
+        },
+        {
+          "rows": 50000,
+          "bytes": 588823962,
+          "fragments": 61,
+          "phase": "append"
+        },
+        {
+          "rows": 55000,
+          "bytes": 594167699,
+          "fragments": 62,
+          "phase": "append"
+        },
+        {
+          "rows": 60000,
+          "bytes": 599511516,
+          "fragments": 63,
+          "phase": "append"
+        },
+        {
+          "rows": 65000,
+          "bytes": 604855413,
+          "fragments": 64,
+          "phase": "append"
+        },
+        {
+          "rows": 70000,
+          "bytes": 610199390,
+          "fragments": 65,
+          "phase": "append"
+        },
+        {
+          "rows": 75000,
+          "bytes": 615543447,
+          "fragments": 66,
+          "phase": "append"
+        },
+        {
+          "rows": 80000,
+          "bytes": 620887584,
+          "fragments": 67,
+          "phase": "append"
+        },
+        {
+          "rows": 85000,
+          "bytes": 626231800,
+          "fragments": 68,
+          "phase": "append"
+        },
+        {
+          "rows": 90000,
+          "bytes": 631576096,
+          "fragments": 69,
+          "phase": "append"
+        },
+        {
+          "rows": 95000,
+          "bytes": 636920473,
+          "fragments": 70,
+          "phase": "append"
+        },
+        {
+          "rows": 100000,
+          "bytes": 642264930,
+          "fragments": 71,
+          "phase": "append"
+        },
+        {
+          "rows": 105000,
+          "bytes": 647624443,
+          "fragments": 72,
+          "phase": "append"
+        },
+        {
+          "rows": 110000,
+          "bytes": 652984036,
+          "fragments": 73,
+          "phase": "append"
+        },
+        {
+          "rows": 115000,
+          "bytes": 658343709,
+          "fragments": 74,
+          "phase": "append"
+        },
+        {
+          "rows": 120000,
+          "bytes": 663703462,
+          "fragments": 75,
+          "phase": "append"
+        },
+        {
+          "rows": 125000,
+          "bytes": 669063295,
+          "fragments": 76,
+          "phase": "append"
+        },
+        {
+          "rows": 130000,
+          "bytes": 674423208,
+          "fragments": 77,
+          "phase": "append"
+        },
+        {
+          "rows": 135000,
+          "bytes": 679783202,
+          "fragments": 78,
+          "phase": "append"
+        },
+        {
+          "rows": 140000,
+          "bytes": 685143278,
+          "fragments": 79,
+          "phase": "append"
+        },
+        {
+          "rows": 145000,
+          "bytes": 690503436,
+          "fragments": 80,
+          "phase": "append"
+        },
+        {
+          "rows": 150000,
+          "bytes": 695863675,
+          "fragments": 81,
+          "phase": "append"
+        },
+        {
+          "rows": 155000,
+          "bytes": 701223995,
+          "fragments": 82,
+          "phase": "append"
+        },
+        {
+          "rows": 160000,
+          "bytes": 706584396,
+          "fragments": 83,
+          "phase": "append"
+        },
+        {
+          "rows": 165000,
+          "bytes": 711944878,
+          "fragments": 84,
+          "phase": "append"
+        },
+        {
+          "rows": 170000,
+          "bytes": 717305441,
+          "fragments": 85,
+          "phase": "append"
+        },
+        {
+          "rows": 175000,
+          "bytes": 722666085,
+          "fragments": 86,
+          "phase": "append"
+        },
+        {
+          "rows": 180000,
+          "bytes": 728026810,
+          "fragments": 87,
+          "phase": "append"
+        },
+        {
+          "rows": 185000,
+          "bytes": 733387615,
+          "fragments": 88,
+          "phase": "append"
+        },
+        {
+          "rows": 190000,
+          "bytes": 738748501,
+          "fragments": 89,
+          "phase": "append"
+        },
+        {
+          "rows": 195000,
+          "bytes": 744109469,
+          "fragments": 90,
+          "phase": "append"
+        },
+        {
+          "rows": 200000,
+          "bytes": 749470518,
+          "fragments": 91,
+          "phase": "append"
+        },
+        {
+          "rows": 205000,
+          "bytes": 754831648,
+          "fragments": 92,
+          "phase": "append"
+        },
+        {
+          "rows": 210000,
+          "bytes": 760192859,
+          "fragments": 93,
+          "phase": "append"
+        },
+        {
+          "rows": 215000,
+          "bytes": 765554151,
+          "fragments": 94,
+          "phase": "append"
+        },
+        {
+          "rows": 220000,
+          "bytes": 770915524,
+          "fragments": 95,
+          "phase": "append"
+        },
+        {
+          "rows": 225000,
+          "bytes": 776276978,
+          "fragments": 96,
+          "phase": "append"
+        },
+        {
+          "rows": 230000,
+          "bytes": 781638512,
+          "fragments": 97,
+          "phase": "append"
+        },
+        {
+          "rows": 235000,
+          "bytes": 787000127,
+          "fragments": 98,
+          "phase": "append"
+        },
+        {
+          "rows": 240000,
+          "bytes": 792361823,
+          "fragments": 99,
+          "phase": "append"
+        },
+        {
+          "rows": 245000,
+          "bytes": 797723601,
+          "fragments": 100,
+          "phase": "append"
+        },
+        {
+          "rows": 250000,
+          "bytes": 803085460,
+          "fragments": 101,
+          "phase": "append"
+        },
+        {
+          "rows": 255000,
+          "bytes": 808447400,
+          "fragments": 102,
+          "phase": "append"
+        },
+        {
+          "rows": 255000,
+          "bytes": 1081236164,
+          "fragments": 104,
+          "phase": "compact_peak"
+        },
+        {
+          "rows": 255000,
+          "bytes": 272784130,
+          "fragments": 2,
+          "phase": "post_cleanup"
+        },
+        {
+          "rows": 260000,
+          "bytes": 278142212,
+          "fragments": 3,
+          "phase": "append"
+        },
+        {
+          "rows": 265000,
+          "bytes": 283500375,
+          "fragments": 4,
+          "phase": "append"
+        },
+        {
+          "rows": 270000,
+          "bytes": 288858619,
+          "fragments": 5,
+          "phase": "append"
+        },
+        {
+          "rows": 275000,
+          "bytes": 294216944,
+          "fragments": 6,
+          "phase": "append"
+        },
+        {
+          "rows": 280000,
+          "bytes": 299575350,
+          "fragments": 7,
+          "phase": "append"
+        },
+        {
+          "rows": 285000,
+          "bytes": 304933837,
+          "fragments": 8,
+          "phase": "append"
+        },
+        {
+          "rows": 290000,
+          "bytes": 310292405,
+          "fragments": 9,
+          "phase": "append"
+        },
+        {
+          "rows": 295000,
+          "bytes": 315651053,
+          "fragments": 10,
+          "phase": "append"
+        },
+        {
+          "rows": 300000,
+          "bytes": 321009782,
+          "fragments": 11,
+          "phase": "append"
+        },
+        {
+          "rows": 305000,
+          "bytes": 326368593,
+          "fragments": 12,
+          "phase": "append"
+        },
+        {
+          "rows": 310000,
+          "bytes": 331727485,
+          "fragments": 13,
+          "phase": "append"
+        },
+        {
+          "rows": 315000,
+          "bytes": 337086458,
+          "fragments": 14,
+          "phase": "append"
+        },
+        {
+          "rows": 320000,
+          "bytes": 342445512,
+          "fragments": 15,
+          "phase": "append"
+        },
+        {
+          "rows": 325000,
+          "bytes": 347804647,
+          "fragments": 16,
+          "phase": "append"
+        },
+        {
+          "rows": 330000,
+          "bytes": 353163863,
+          "fragments": 17,
+          "phase": "append"
+        },
+        {
+          "rows": 335000,
+          "bytes": 358523160,
+          "fragments": 18,
+          "phase": "append"
+        },
+        {
+          "rows": 340000,
+          "bytes": 363882538,
+          "fragments": 19,
+          "phase": "append"
+        },
+        {
+          "rows": 345000,
+          "bytes": 369241997,
+          "fragments": 20,
+          "phase": "append"
+        },
+        {
+          "rows": 350000,
+          "bytes": 374601536,
+          "fragments": 21,
+          "phase": "append"
+        },
+        {
+          "rows": 355000,
+          "bytes": 379961156,
+          "fragments": 22,
+          "phase": "append"
+        },
+        {
+          "rows": 360000,
+          "bytes": 385320857,
+          "fragments": 23,
+          "phase": "append"
+        },
+        {
+          "rows": 365000,
+          "bytes": 390680640,
+          "fragments": 24,
+          "phase": "append"
+        },
+        {
+          "rows": 370000,
+          "bytes": 396040504,
+          "fragments": 25,
+          "phase": "append"
+        },
+        {
+          "rows": 375000,
+          "bytes": 401400449,
+          "fragments": 26,
+          "phase": "append"
+        },
+        {
+          "rows": 380000,
+          "bytes": 406760475,
+          "fragments": 27,
+          "phase": "append"
+        },
+        {
+          "rows": 385000,
+          "bytes": 412120582,
+          "fragments": 28,
+          "phase": "append"
+        },
+        {
+          "rows": 390000,
+          "bytes": 417480770,
+          "fragments": 29,
+          "phase": "append"
+        },
+        {
+          "rows": 395000,
+          "bytes": 422841039,
+          "fragments": 30,
+          "phase": "append"
+        },
+        {
+          "rows": 400000,
+          "bytes": 428201388,
+          "fragments": 31,
+          "phase": "append"
+        },
+        {
+          "rows": 405000,
+          "bytes": 433561818,
+          "fragments": 32,
+          "phase": "append"
+        },
+        {
+          "rows": 410000,
+          "bytes": 438922330,
+          "fragments": 33,
+          "phase": "append"
+        },
+        {
+          "rows": 415000,
+          "bytes": 444282923,
+          "fragments": 34,
+          "phase": "append"
+        },
+        {
+          "rows": 420000,
+          "bytes": 449643597,
+          "fragments": 35,
+          "phase": "append"
+        },
+        {
+          "rows": 425000,
+          "bytes": 455004352,
+          "fragments": 36,
+          "phase": "append"
+        },
+        {
+          "rows": 430000,
+          "bytes": 460365188,
+          "fragments": 37,
+          "phase": "append"
+        },
+        {
+          "rows": 435000,
+          "bytes": 465726105,
+          "fragments": 38,
+          "phase": "append"
+        },
+        {
+          "rows": 440000,
+          "bytes": 471087103,
+          "fragments": 39,
+          "phase": "append"
+        },
+        {
+          "rows": 445000,
+          "bytes": 476448181,
+          "fragments": 40,
+          "phase": "append"
+        },
+        {
+          "rows": 450000,
+          "bytes": 481809340,
+          "fragments": 41,
+          "phase": "append"
+        },
+        {
+          "rows": 455000,
+          "bytes": 487170580,
+          "fragments": 42,
+          "phase": "append"
+        },
+        {
+          "rows": 460000,
+          "bytes": 492531902,
+          "fragments": 43,
+          "phase": "append"
+        },
+        {
+          "rows": 465000,
+          "bytes": 497893305,
+          "fragments": 44,
+          "phase": "append"
+        },
+        {
+          "rows": 470000,
+          "bytes": 503254789,
+          "fragments": 45,
+          "phase": "append"
+        },
+        {
+          "rows": 475000,
+          "bytes": 508616354,
+          "fragments": 46,
+          "phase": "append"
+        },
+        {
+          "rows": 480000,
+          "bytes": 513978000,
+          "fragments": 47,
+          "phase": "append"
+        },
+        {
+          "rows": 485000,
+          "bytes": 519339726,
+          "fragments": 48,
+          "phase": "append"
+        },
+        {
+          "rows": 490000,
+          "bytes": 524701533,
+          "fragments": 49,
+          "phase": "append"
+        },
+        {
+          "rows": 495000,
+          "bytes": 530063421,
+          "fragments": 50,
+          "phase": "append"
+        },
+        {
+          "rows": 500000,
+          "bytes": 535425391,
+          "fragments": 51,
+          "phase": "append"
+        }
+      ],
+      "final_bytes": 535425391,
+      "final_fragments": 51,
+      "logical_bytes": 512000000
+    }
+  ]
+}

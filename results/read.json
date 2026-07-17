@@ -1,0 +1,74 @@
+{
+  "bench": "read",
+  "cap_label": "2cpu-4g",
+  "unix_time": 1784308901.4997118,
+  "results": [
+    {
+      "workload": "blob",
+      "op": "full_scan_projected",
+      "rows": 300000,
+      "rows_per_s": 3827501.4,
+      "mb_per_s": 3919.4,
+      "wall_s": 0.0784,
+      "cpu_s": 0.07,
+      "peak_rss_mb": 680.8
+    },
+    {
+      "workload": "blob",
+      "op": "filtered_scan_5k_window",
+      "iters": 20,
+      "p50_ms": 5.0,
+      "p95_ms": 5.55,
+      "p99_ms": 5.79
+    },
+    {
+      "workload": "blob",
+      "op": "lowcard_string_filter_probe",
+      "filter": "object_type = 'messages'",
+      "result": "PANIC/abort",
+      "error": "External error: RuntimeError: Task was aborted"
+    },
+    {
+      "workload": "blob",
+      "op": "keyset_paging",
+      "page_size": 10000,
+      "pages": 30,
+      "pages_per_s": 354.73,
+      "wall_s": 0.0846,
+      "cpu_s": 0.08,
+      "peak_rss_mb": 854.8
+    },
+    {
+      "workload": "vector",
+      "op": "ann_search",
+      "index": "none_flat",
+      "queries": 200,
+      "qps": 4.1,
+      "p50_ms": 241.81,
+      "p95_ms": 254.28,
+      "p99_ms": 266.47
+    },
+    {
+      "workload": "vector",
+      "op": "ann_search",
+      "index": "IVF256_PQ96",
+      "nprobes": 10,
+      "queries": 200,
+      "qps": 177.1,
+      "p50_ms": 4.98,
+      "p95_ms": 8.56,
+      "p99_ms": 10.69
+    },
+    {
+      "workload": "vector",
+      "op": "ann_search",
+      "index": "IVF256_PQ96",
+      "nprobes": 50,
+      "queries": 200,
+      "qps": 110.2,
+      "p50_ms": 8.77,
+      "p95_ms": 11.13,
+      "p99_ms": 12.09
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "bench": "cap2gb",
+  "cap_label": "2cpu-4g",
+  "unix_time": 1784308915.0921614,
+  "int32_max_bytes": 2147483647,
+  "construct_and_cap": {
+    "total_bytes": 2200000000,
+    "over_int32_by_bytes": 52516353,
+    "large_binary_constructed": true,
+    "array_len": 2200,
+    "binary_cast_ok": false,
+    "cap_confirmed": true,
+    "cap_error": "Failed casting from large_binary to binary: input array too large"
+  },
+  "write_one_2gb_batch": {
+    "total_bytes": 2200000000,
+    "written": true,
+    "rows": 2200,
+    "error": null
+  },
+  "append_growth_past_2gb": {
+    "per_batch_bytes": 100000000,
+    "batches": 24,
+    "logical_column_bytes": 2400000000,
+    "exceeded_2gb": true,
+    "on_disk_bytes": 4800190530,
+    "fragments": 48,
+    "error": null
+  }
+}

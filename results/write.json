@@ -1,0 +1,100 @@
+{
+  "bench": "write",
+  "cap_label": "2cpu-4g",
+  "unix_time": 1784308702.0125074,
+  "results": [
+    {
+      "workload": "blob",
+      "op": "append",
+      "payload_bytes": 1024,
+      "rows_per_batch": 131072,
+      "rows": 262144,
+      "rows_per_s": 458162.3,
+      "mb_per_s": 469.2,
+      "wall_s": 0.5722,
+      "cpu_s": 0.51,
+      "peak_rss_mb": 789.0
+    },
+    {
+      "workload": "blob",
+      "op": "merge_insert",
+      "payload_bytes": 1024,
+      "rows_per_batch": 131072,
+      "rows": 131072,
+      "rows_per_s": 254228.3,
+      "mb_per_s": 260.3,
+      "wall_s": 0.5156,
+      "cpu_s": 0.5,
+      "peak_rss_mb": 985.6
+    },
+    {
+      "workload": "blob",
+      "op": "append",
+      "payload_bytes": 10240,
+      "rows_per_batch": 13107,
+      "rows": 26214,
+      "rows_per_s": 67793.5,
+      "mb_per_s": 694.2,
+      "wall_s": 0.3867,
+      "cpu_s": 0.34,
+      "peak_rss_mb": 1132.3
+    },
+    {
+      "workload": "blob",
+      "op": "merge_insert",
+      "payload_bytes": 10240,
+      "rows_per_batch": 13107,
+      "rows": 13107,
+      "rows_per_s": 39497.9,
+      "mb_per_s": 404.5,
+      "wall_s": 0.3318,
+      "cpu_s": 0.28,
+      "peak_rss_mb": 1256.3
+    },
+    {
+      "workload": "blob",
+      "op": "append",
+      "payload_bytes": 102400,
+      "rows_per_batch": 1310,
+      "rows": 2620,
+      "rows_per_s": 23426.2,
+      "mb_per_s": 2398.8,
+      "wall_s": 0.1118,
+      "cpu_s": 0.09,
+      "peak_rss_mb": 1267.6
+    },
+    {
+      "workload": "blob",
+      "op": "merge_insert",
+      "payload_bytes": 102400,
+      "rows_per_batch": 1310,
+      "rows": 1310,
+      "rows_per_s": 7259.8,
+      "mb_per_s": 743.4,
+      "wall_s": 0.1804,
+      "cpu_s": 0.18,
+      "peak_rss_mb": 1407.9
+    },
+    {
+      "workload": "vector",
+      "op": "append",
+      "dim": 768,
+      "rows": 150000,
+      "rows_per_s": 106610.6,
+      "mb_per_s": 327.5,
+      "wall_s": 1.407,
+      "cpu_s": 1.39,
+      "peak_rss_mb": 1503.9
+    },
+    {
+      "workload": "vector",
+      "op": "create_index_ivf_pq",
+      "dim": 768,
+      "rows": 200000,
+      "index": "IVF256_PQ96",
+      "wall_s": 145.5316,
+      "cpu_s": 280.42,
+      "peak_rss_mb": 1913.8
+    }
+  ]
+}
