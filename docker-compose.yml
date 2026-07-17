@@ -1,0 +1,103 @@
+# LanceDB scaling-characterization harness.
+#
+# Boots the same infra shape MOVEIT uses locally (MinIO for S3 + Lance tables,
+# DynamoDB-local for the safe-mode commit store) plus a `bench` runner pinned to
+# lancedb==0.33.0 and CAPPED to the MOVEIT prod pod limits (2 vCPU / 4 GiB, disk
+# uncapped). MinIO/DDB are deliberately UNCAPPED so the only bottleneck is the
+# capped bench process — that is what "the ceiling" means here.
+#
+# Run via ./run_all.sh (it sets BENCH_CPUS/BENCH_MEM and execs the scripts).
+name: lancedb-bench
+
+services:
+  # --- S3-compatible object store: Lance tables live here -------------------
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
+    ports:
+      - "127.0.0.1:${MINIO_API_PORT:-9010}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9011}:9001"
+    volumes:
+      - minio-data:/data
+    networks: [bench]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  # --- one-shot: create the Lance bucket ------------------------------------
+  createbucket:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
+      BENCH_BUCKET: ${BENCH_BUCKET:-lance-bench}
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $${AWS_ACCESS_KEY_ID} $${AWS_SECRET_ACCESS_KEY} &&
+      mc mb --ignore-existing local/$${BENCH_BUCKET} &&
+      echo 'bucket ready: '$${BENCH_BUCKET}
+      "
+    networks: [bench]
+
+  # --- DynamoDB-local: SAFE-mode commit store (s3+ddb://) -------------------
+  # Uncapped, in-memory, ephemeral. common.py creates the commit table on first
+  # use (hash=base_uri, range=version), same contract Lance's DDB store expects.
+  ddb:
+    image: amazon/dynamodb-local:latest
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    ports:
+      - "127.0.0.1:${DDB_PORT:-8010}:8000"
+    networks: [bench]
+
+  # --- THE CAPPED RUNNER ----------------------------------------------------
+  # cpus/mem_limit are honored by `docker compose up` (v2, non-swarm). Disk is
+  # left uncapped by design. run_all.sh overrides BENCH_CPUS/BENCH_MEM for the
+  # optional staging-cap (1cpu/2g) pass.
+  bench:
+    build: .
+    # Run as the invoking host user so results/ isn't root-owned (run_all.sh
+    # exports HOST_UID/HOST_GID). Defaults to root if unset.
+    user: "${HOST_UID:-0}:${HOST_GID:-0}"
+    cpus: ${BENCH_CPUS:-2.0}
+    mem_limit: ${BENCH_MEM:-4g}
+    # memswap == mem_limit disables swap, so hitting the cap OOMs (a real finding)
+    # instead of silently spilling to swap and skewing the numbers.
+    memswap_limit: ${BENCH_MEM:-4g}
+    depends_on:
+      createbucket:
+        condition: service_completed_successfully
+      ddb:
+        condition: service_started
+    volumes:
+      - ./bench:/bench:ro
+      - ./results:/results
+    environment:
+      # In-network DNS names; object_store talks path-style HTTP to MinIO.
+      S3_ENDPOINT: http://minio:9000
+      DDB_ENDPOINT: http://ddb:8000
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
+      BENCH_BUCKET: ${BENCH_BUCKET:-lance-bench}
+      DDB_COMMIT_TABLE: ${DDB_COMMIT_TABLE:-lance_commits}
+      # non-root user has no home; give caches a writable dir
+      HOME: /tmp
+      MPLCONFIGDIR: /tmp/mpl
+      # Stamped into result JSON so the report knows which cap produced them.
+      BENCH_CAP_LABEL: ${BENCH_CAP_LABEL:-2cpu-4g}
+    networks: [bench]
+
+networks:
+  bench:
+
+volumes:
+  minio-data:
