@@ -26,11 +26,13 @@ from __future__ import annotations
 import json
 import multiprocessing as mp
 import os
+import threading
 import time
 
 import lance
 import lancedb
 import numpy as np
+import psutil
 
 import common as c
 
@@ -264,6 +266,17 @@ def table_count_cells(cfg: dict, rng) -> list:
 def _compact_worker(uri: str, opts: dict, trpf: int, q) -> None:
     ds = lance.dataset(uri, storage_options=opts)
     before = len(ds.get_fragments())
+    proc = psutil.Process()
+    stop = threading.Event()
+
+    def _heartbeat() -> None:  # live progress: compacting 1 TB rewrites ~1 TB, can take hours
+        t0 = time.perf_counter()
+        while not stop.wait(30):
+            print(f"[query_degradation] compaction running… {round(time.perf_counter() - t0)}s, "
+                  f"rss={round(proc.memory_info().rss / 1e6)}MB", flush=True)
+
+    hb = threading.Thread(target=_heartbeat, daemon=True)
+    hb.start()
     try:
         with c.Meter() as m:
             ds.optimize.compact_files(target_rows_per_fragment=trpf)  # NO cleanup_old_versions (constraint)
@@ -274,19 +287,27 @@ def _compact_worker(uri: str, opts: dict, trpf: int, q) -> None:
                "cpu_s": round(m.metrics.cpu_s, 2), "peak_rss_mb": m.metrics.peak_rss_mb})
     except Exception as exc:  # noqa: BLE001
         q.put({"oom": False, "error": str(exc)[:300], "fragments_before": before})
+    finally:
+        stop.set()
 
 
 def _run_isolated(target, *args) -> dict:
     ctx = mp.get_context("spawn")
     q: mp.Queue = ctx.Queue()
     p = ctx.Process(target=target, args=(*args, q))
+    t0 = time.perf_counter()
     p.start()
     p.join()
+    elapsed = round(time.perf_counter() - t0, 1)  # wall even if the child OOM-dies before reporting
     if p.exitcode == 0 and not q.empty():
-        return q.get()
+        r = q.get()
+        r["elapsed_s"] = elapsed
+        return r
     if p.exitcode == -9:
-        return {"oom": True, "exitcode": -9, "error": "OOM-killed (SIGKILL) during compaction"}
-    return {"error": f"compaction worker died exitcode={p.exitcode}", "exitcode": p.exitcode}
+        return {"oom": True, "exitcode": -9, "elapsed_s": elapsed,
+                "error": f"OOM-killed (SIGKILL) after {elapsed}s during compaction"}
+    return {"error": f"compaction worker died exitcode={p.exitcode} after {elapsed}s",
+            "exitcode": p.exitcode, "elapsed_s": elapsed}
 
 
 def compaction_cells(conn0: dict, cfg: dict, rng) -> tuple[list, dict]:
