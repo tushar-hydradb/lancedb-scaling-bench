@@ -80,4 +80,21 @@ python bench_parallel_ingest.py
 python bench_query_degradation.py
 python plots.py
 python report.py
+
+# Publish the report to the bucket root for easy retrieval later (REPORT.md at
+# root + graphs/ alongside it so the report's relative image links resolve;
+# raw JSON under results/). Toggle off with BENCH_UPLOAD_REPORT=0.
+if [ "${BENCH_UPLOAD_REPORT:-1}" = "1" ]; then
+  if command -v aws >/dev/null 2>&1; then
+    echo "[run_ec2] publishing report to s3://$BENCH_BUCKET/ ..."
+    aws s3 cp "$BENCH_RESULTS_DIR/REPORT.md" "s3://$BENCH_BUCKET/REPORT.md" --only-show-errors
+    aws s3 sync "$BENCH_RESULTS_DIR/graphs" "s3://$BENCH_BUCKET/graphs/" --only-show-errors
+    aws s3 sync "$BENCH_RESULTS_DIR" "s3://$BENCH_BUCKET/results/" --exclude "graphs/*" --only-show-errors
+    echo "[run_ec2] report:  s3://$BENCH_BUCKET/REPORT.md"
+    echo "[run_ec2] graphs:  s3://$BENCH_BUCKET/graphs/"
+    echo "[run_ec2] rawjson: s3://$BENCH_BUCKET/results/"
+  else
+    echo "[run_ec2] aws CLI not found; skipping report upload (set BENCH_UPLOAD_REPORT=0 to silence)" >&2
+  fi
+fi
 echo "[run_ec2] done -> $BENCH_RESULTS_DIR/REPORT.md"

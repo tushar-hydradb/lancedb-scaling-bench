@@ -28,7 +28,15 @@ hold multiple terabytes. That suite runs **uncapped on an EC2 box against real A
 # (aws config / IMDS). Override with BENCH_BUCKET / AWS_REGION if needed.
 BENCH_SMOKE=1 ./run_ec2.sh    # dry run: 2x1 GB, validates IAM + measures real EC2->S3 MB/s
 ./run_ec2.sh                  # full: 4 tables x ~1 TB (~4 TB in S3)
-aws s3 rm --recursive "s3://lancedb-temp-bucket/bigscale"   # teardown to stop storage billing
+```
+
+The run publishes the report to the bucket root (`BENCH_UPLOAD_REPORT=0` to skip). Grab it from anywhere:
+
+```sh
+aws s3 cp    s3://lancedb-temp-bucket/REPORT.md .        # the report
+aws s3 sync  s3://lancedb-temp-bucket/graphs ./graphs    # its images
+aws s3 sync  s3://lancedb-temp-bucket/results ./results  # raw JSON
+aws s3 rm --recursive "s3://lancedb-temp-bucket/bigscale"  # teardown the ~4 TB of table data
 ```
 
 `run_ec2.sh` uses a bare venv (not Docker — avoids the IMDSv2 hop-limit gotcha that blocks containers
