@@ -76,25 +76,40 @@ pip install --quiet -r "$ROOT/requirements.txt"
 
 cd "$ROOT/bench"
 echo "[run_ec2] bucket=$BENCH_BUCKET region=$AWS_REGION smoke=${BENCH_SMOKE:-0} cores=$(nproc)"
-python bench_parallel_ingest.py
-python bench_query_degradation.py
-python plots.py
-python report.py
+# Publish whatever's in results/ to the bucket (REPORT.md at root so it's a
+# one-liner to grab; graphs/ alongside so its image links resolve; raw JSON under
+# results/). Called after EACH stage so a mid-run death (e.g. an OOM during the
+# 1 TB compaction) still leaves the ingest + query JSON in S3. Toggle with
+# BENCH_UPLOAD_REPORT=0.
+publish() {
+  [ "${BENCH_UPLOAD_REPORT:-1}" = "1" ] || return 0
+  command -v aws >/dev/null 2>&1 || { echo "[run_ec2] aws CLI missing; skip upload" >&2; return 0; }
+  aws s3 sync "$BENCH_RESULTS_DIR" "s3://$BENCH_BUCKET/results/" --exclude "graphs/*" --only-show-errors || true
+  [ -d "$BENCH_RESULTS_DIR/graphs" ] && aws s3 sync "$BENCH_RESULTS_DIR/graphs" "s3://$BENCH_BUCKET/graphs/" --only-show-errors || true
+  [ -f "$BENCH_RESULTS_DIR/REPORT.md" ] && aws s3 cp "$BENCH_RESULTS_DIR/REPORT.md" "s3://$BENCH_BUCKET/REPORT.md" --only-show-errors || true
+}
 
-# Publish the report to the bucket root for easy retrieval later (REPORT.md at
-# root + graphs/ alongside it so the report's relative image links resolve;
-# raw JSON under results/). Toggle off with BENCH_UPLOAD_REPORT=0.
-if [ "${BENCH_UPLOAD_REPORT:-1}" = "1" ]; then
-  if command -v aws >/dev/null 2>&1; then
-    echo "[run_ec2] publishing report to s3://$BENCH_BUCKET/ ..."
-    aws s3 cp "$BENCH_RESULTS_DIR/REPORT.md" "s3://$BENCH_BUCKET/REPORT.md" --only-show-errors
-    aws s3 sync "$BENCH_RESULTS_DIR/graphs" "s3://$BENCH_BUCKET/graphs/" --only-show-errors
-    aws s3 sync "$BENCH_RESULTS_DIR" "s3://$BENCH_BUCKET/results/" --exclude "graphs/*" --only-show-errors
-    echo "[run_ec2] report:  s3://$BENCH_BUCKET/REPORT.md"
-    echo "[run_ec2] graphs:  s3://$BENCH_BUCKET/graphs/"
-    echo "[run_ec2] rawjson: s3://$BENCH_BUCKET/results/"
-  else
-    echo "[run_ec2] aws CLI not found; skipping report upload (set BENCH_UPLOAD_REPORT=0 to silence)" >&2
-  fi
+# Resume support: the ~4 h ingest writes results/parallel_ingest.json (with the
+# per-table checkpoint versions). The query stage only READS that JSON + the 1 TB
+# tables already in S3 — so a re-run can skip ingest entirely and pick up from the
+# query stage. BENCH_SKIP_INGEST=1 does that.
+if [ "${BENCH_SKIP_INGEST:-0}" = "1" ]; then
+  [ -f "$BENCH_RESULTS_DIR/parallel_ingest.json" ] || {
+    echo "[run_ec2] BENCH_SKIP_INGEST=1 but $BENCH_RESULTS_DIR/parallel_ingest.json is missing." >&2
+    echo "[run_ec2] grab it first: aws s3 cp s3://$BENCH_BUCKET/results/parallel_ingest.json $BENCH_RESULTS_DIR/" >&2
+    exit 1
+  }
+  echo "[run_ec2] BENCH_SKIP_INGEST=1 — resuming from existing parallel_ingest.json (no re-ingest)"
+else
+  python bench_parallel_ingest.py; publish
 fi
+python bench_query_degradation.py; publish
+python plots.py
+python report.py;                  publish
+
 echo "[run_ec2] done -> $BENCH_RESULTS_DIR/REPORT.md"
+if [ "${BENCH_UPLOAD_REPORT:-1}" = "1" ]; then
+  echo "[run_ec2] report:  s3://$BENCH_BUCKET/REPORT.md"
+  echo "[run_ec2] graphs:  s3://$BENCH_BUCKET/graphs/"
+  echo "[run_ec2] rawjson: s3://$BENCH_BUCKET/results/"
+fi

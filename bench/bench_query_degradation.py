@@ -52,7 +52,11 @@ def _load_qcfg(tables: list) -> dict:
         "default_gb": default_gb,
         "neighbor_ks": [1, 2, 4],
         "table_count_ns": [1, 2, 4, 8],
-        "compact_trpf": int(os.environ.get("BENCH_COMPACT_TRPF", 2000)),
+        # target rows/fragment for the ONE compaction. At ~5 MB/row this bounds
+        # per-output-fragment memory: 2000 rows ~= 10 GB/fragment OOM'd a real
+        # box, so default 500 (~2.5 GB/fragment) while still collapsing ~1000
+        # input fragments to ~400. Raise it on a big-RAM box.
+        "compact_trpf": int(os.environ.get("BENCH_COMPACT_TRPF", 500)),
         "smoke": smoke,
     }
     if smoke:
@@ -336,20 +340,36 @@ def main() -> None:
     rng = np.random.default_rng(cfg["seed"])
     conn0 = tables[0]
 
+    def _write(cell_list, probe, partial):
+        c.write_result("query_degradation", {
+            "config": cfg,
+            "cpu_limit_cores": c.cgroup_cpu_limit_cores(),
+            "cells": cell_list,
+            "compaction_probe": probe,
+            "partial": partial,
+        })
+
     cells = []
     cells += size_cells(conn0, cfg, rng)
     cells += layout_cells(tables, cfg, rng)
     cells += neighbor_cells(conn0, tables, cfg, rng)
     cells += table_count_cells(cfg, rng)
-    comp_cells, probe = compaction_cells(conn0, cfg, rng)  # last: mutates conn_0 (old versions kept)
-    cells += comp_cells
 
-    c.write_result("query_degradation", {
-        "config": cfg,
-        "cpu_limit_cores": c.cgroup_cpu_limit_cores(),
-        "cells": cells,
-        "compaction_probe": probe,
-    })
+    # Persist everything measured so far BEFORE the compaction step. Compacting a
+    # ~1 TB table is the memory-risky part (it OOM-killed a real run and took the
+    # whole tmux session with it); a crash there must not lose the expensive query
+    # cells already gathered. Compaction can also be skipped entirely.
+    _write(cells, None, partial=True)
+    print(f"[query_degradation] persisted {len(cells)} cells (pre-compaction)", flush=True)
+
+    if os.environ.get("BENCH_SKIP_COMPACTION") == "1":
+        print("[query_degradation] BENCH_SKIP_COMPACTION=1 — skipping compaction axis", flush=True)
+        _write(cells, {"skipped": True}, partial=False)
+        return
+
+    comp_cells, probe = compaction_cells(conn0, cfg, rng)  # mutates conn_0 (old versions kept)
+    cells += comp_cells
+    _write(cells, probe, partial=False)
 
 
 if __name__ == "__main__":
