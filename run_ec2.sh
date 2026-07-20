@@ -45,9 +45,30 @@ export BENCH_CAP_LABEL="ec2-uncapped"
 export MPLCONFIGDIR="${MPLCONFIGDIR:-/tmp/mpl}"
 mkdir -p "$BENCH_RESULTS_DIR" "$MPLCONFIGDIR"
 
-if [ ! -d "$VENV" ]; then
-  python3 -m venv "$VENV"
+# Pick a Python the pinned wheels support. Python 3.14 breaks matplotlib
+# (Path.__deepcopy__ recursion) and lacks wheels for the pins; the validated
+# stack is 3.13 (matching the Dockerfile). Override with PYTHON=python3.x.
+PYBIN="${PYTHON:-}"
+if [ -z "$PYBIN" ]; then
+  for cand in python3.13 python3.12 python3.11 python3; do
+    command -v "$cand" >/dev/null 2>&1 && PYBIN="$cand" && break
+  done
 fi
+_supported() { case "$1" in 3.11|3.12|3.13) return 0 ;; *) return 1 ;; esac; }
+_pyver="$("$PYBIN" -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>/dev/null || echo '?')"
+if ! _supported "$_pyver"; then
+  echo "[run_ec2] ERROR: $PYBIN is Python $_pyver; need 3.11-3.13 (3.14 breaks matplotlib)." >&2
+  echo "[run_ec2] install python3.13 and re-run, or: PYTHON=python3.13 ./run_ec2.sh" >&2
+  exit 1
+fi
+
+# Recreate the venv if missing or built with an unsupported interpreter.
+if [ -d "$VENV" ]; then
+  _vv="$("$VENV/bin/python" -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>/dev/null || echo '?')"
+  _supported "$_vv" || { echo "[run_ec2] recreating .venv (was Python $_vv)"; rm -rf "$VENV"; }
+fi
+[ -d "$VENV" ] || "$PYBIN" -m venv "$VENV"
+echo "[run_ec2] venv python: $PYBIN ($_pyver)"
 # shellcheck disable=SC1091
 source "$VENV/bin/activate"
 pip install --quiet --upgrade pip
