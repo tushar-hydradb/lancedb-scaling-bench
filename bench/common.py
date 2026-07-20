@@ -47,7 +47,7 @@ DDB_ENDPOINT = os.environ.get("DDB_ENDPOINT", "http://ddb:8000")
 REGION = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "us-east-1"
 ACCESS_KEY = os.environ.get("AWS_ACCESS_KEY_ID", "minioadmin")
 SECRET_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "minioadmin")
-BUCKET = os.environ.get("BENCH_BUCKET", "lancedb-temp-bucket")
+BUCKET = os.environ.get("BENCH_BUCKET", "lancedb-temp-tprf500-bucket")
 DDB_COMMIT_TABLE = os.environ.get("DDB_COMMIT_TABLE", "lance_commits")
 CAP_LABEL = os.environ.get("BENCH_CAP_LABEL", "unknown")
 
@@ -308,9 +308,10 @@ class CgroupSampler:
     Each sample: {t, cpu_cores, rss_mb, **extra}.
     """
 
-    def __init__(self, interval: float = 0.25, extra_fn=None):
+    def __init__(self, interval: float = 0.25, extra_fn=None, jsonl_name: str | None = None):
         self.interval = interval
         self.extra_fn = extra_fn
+        self.jsonl_name = jsonl_name  # if set, each sample is also appended (crash-safe)
         self.samples: list[dict[str, Any]] = []
         self.events: list[dict[str, Any]] = []
         self._stop = threading.Event()
@@ -340,6 +341,11 @@ class CgroupSampler:
                 except Exception:  # noqa: BLE001 — never let sampling crash the run
                     pass
             self.samples.append(sample)
+            if self.jsonl_name:
+                try:
+                    append_jsonl(self.jsonl_name, sample)
+                except Exception:  # noqa: BLE001
+                    pass
 
     def mark(self, label: str, **meta: Any) -> None:
         self.events.append({"t": round(self._now(), 3), "label": label, **meta})
@@ -357,7 +363,10 @@ class CgroupSampler:
 
 
 # --- result IO --------------------------------------------------------------
-def write_result(name: str, payload: dict[str, Any]) -> None:
+def write_result(name: str, payload: dict[str, Any], quiet: bool = False) -> None:
+    """Write the consolidated per-bench JSON. Written to a temp file then renamed
+    so a crash mid-write never leaves a truncated/corrupt JSON — the last good
+    snapshot survives. Called often (after each unit of work) for resilience."""
     os.makedirs(RESULTS_DIR, exist_ok=True)
     payload = {
         "bench": name,
@@ -366,9 +375,80 @@ def write_result(name: str, payload: dict[str, Any]) -> None:
         **payload,
     }
     path = os.path.join(RESULTS_DIR, f"{name}.json")
-    with open(path, "w") as fh:
+    tmp = path + ".tmp"
+    with open(tmp, "w") as fh:
         json.dump(payload, fh, indent=2, default=_json_default)
-    print(f"[{name}] wrote {path}", flush=True)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, path)  # atomic
+    if not quiet:
+        print(f"[{name}] wrote {path}", flush=True)
+
+
+def append_jsonl(name: str, record: dict[str, Any]) -> None:
+    """Append one JSON line to RESULTS_DIR/<name>.jsonl, flushed+fsynced so a
+    hard kill (OOM, spot reclaim, SSH drop) preserves everything up to the last
+    completed record. Keep records small; single-writer per file recommended."""
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    record = {"ts": time.time(), **record}
+    path = os.path.join(RESULTS_DIR, f"{name}.jsonl")
+    with open(path, "a") as fh:
+        fh.write(json.dumps(record, default=_json_default) + "\n")
+        fh.flush()
+        os.fsync(fh.fileno())
+
+
+def _imds(path: str, token: str | None = None, timeout: float = 0.3) -> str | None:
+    import urllib.request
+    try:
+        headers = {"X-aws-ec2-metadata-token": token} if token else {}
+        req = urllib.request.Request(f"http://169.254.169.254/latest/{path}", headers=headers)
+        return urllib.request.urlopen(req, timeout=timeout).read().decode()
+    except Exception:  # noqa: BLE001 — not on EC2 / IMDS disabled
+        return None
+
+
+def host_info() -> dict[str, Any]:
+    """Everything about the box + build that helps interpret the numbers later:
+    cores, RAM, cgroup cap, package versions, and (best-effort) EC2 instance id/
+    type/AZ from IMDS. Cheap; recorded once per bench."""
+    info: dict[str, Any] = {
+        "nproc": os.cpu_count(),
+        "cpu_limit_cores": cgroup_cpu_limit_cores(),
+        "real_s3": REAL_S3,
+        "bucket": BUCKET,
+        "region": REGION,
+    }
+    try:
+        import lance
+        import lancedb
+        info["lance_version"] = getattr(lance, "__version__", "?")
+        info["lancedb_version"] = getattr(lancedb, "__version__", "?")
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        with open("/proc/meminfo") as fh:
+            for line in fh:
+                if line.startswith("MemTotal"):
+                    info["mem_total_gb"] = round(int(line.split()[1]) / 1e6, 1)
+                    break
+    except OSError:
+        pass
+    tok = None
+    try:
+        import urllib.request
+        req = urllib.request.Request("http://169.254.169.254/latest/api/token", method="PUT",
+                                     headers={"X-aws-ec2-metadata-token-ttl-seconds": "60"})
+        tok = urllib.request.urlopen(req, timeout=0.3).read().decode()
+    except Exception:  # noqa: BLE001
+        tok = None
+    for key, path in (("instance_type", "meta-data/instance-type"),
+                      ("instance_id", "meta-data/instance-id"),
+                      ("az", "meta-data/placement/availability-zone")):
+        val = _imds(path, tok)
+        if val:
+            info[key] = val
+    return info
 
 
 def _json_default(o: Any) -> Any:

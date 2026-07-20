@@ -20,7 +20,7 @@
 # Teardown after capturing results/: aws s3 rm --recursive "s3://$BENCH_BUCKET/bigscale"
 set -euo pipefail
 
-export BENCH_BUCKET="${BENCH_BUCKET:-lancedb-temp-bucket}"
+export BENCH_BUCKET="${BENCH_BUCKET:-lancedb-temp-tprf500-bucket}"
 
 # Region = the creds' default. Resolve from aws-config, then EC2 IMDS; fall back
 # to us-east-1. Export both names so boto3 and Lance's object_store agree.
@@ -88,6 +88,15 @@ publish() {
   [ -d "$BENCH_RESULTS_DIR/graphs" ] && aws s3 sync "$BENCH_RESULTS_DIR/graphs" "s3://$BENCH_BUCKET/graphs/" --only-show-errors || true
   [ -f "$BENCH_RESULTS_DIR/REPORT.md" ] && aws s3 cp "$BENCH_RESULTS_DIR/REPORT.md" "s3://$BENCH_BUCKET/REPORT.md" --only-show-errors || true
 }
+
+# Belt-and-suspenders: sync results/ (incl. the append-only *.jsonl detail logs
+# and the frequently-snapshotted *.json) to S3 every 5 min while the long stages
+# run, so an overnight OOM / spot-reclaim / SSH-drop still leaves fresh data.
+if [ "${BENCH_UPLOAD_REPORT:-1}" = "1" ] && command -v aws >/dev/null 2>&1; then
+  ( while true; do sleep 300; publish; done ) &
+  SYNC_PID=$!
+  trap 'kill "$SYNC_PID" 2>/dev/null || true' EXIT
+fi
 
 # Resume support: the ~4 h ingest writes results/parallel_ingest.json (with the
 # per-table checkpoint versions). The query stage only READS that JSON + the 1 TB

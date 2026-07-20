@@ -24,8 +24,8 @@ hold multiple terabytes. That suite runs **uncapped on an EC2 box against real A
 
 ```sh
 # on the EC2 box (IAM instance role attached), after scp/clone of this repo.
-# Bucket defaults to lancedb-temp-bucket; region is taken from the creds' default
-# (aws config / IMDS). Override with BENCH_BUCKET / AWS_REGION if needed.
+# Bucket defaults to lancedb-temp-tprf500-bucket; region is taken from the creds'
+# default (aws config / IMDS). Override with BENCH_BUCKET / AWS_REGION if needed.
 BENCH_SMOKE=1 ./run_ec2.sh    # dry run: 2x1 GB, validates IAM + measures real EC2->S3 MB/s
 ./run_ec2.sh                  # full: 4 tables x ~1 TB (~4 TB in S3)
 ```
@@ -33,20 +33,28 @@ BENCH_SMOKE=1 ./run_ec2.sh    # dry run: 2x1 GB, validates IAM + measures real E
 The run publishes the report to the bucket root (`BENCH_UPLOAD_REPORT=0` to skip). Grab it from anywhere:
 
 ```sh
-aws s3 cp    s3://lancedb-temp-bucket/REPORT.md .        # the report
-aws s3 sync  s3://lancedb-temp-bucket/graphs ./graphs    # its images
-aws s3 sync  s3://lancedb-temp-bucket/results ./results  # raw JSON
-aws s3 rm --recursive "s3://lancedb-temp-bucket/bigscale"  # teardown the ~4 TB of table data
+aws s3 cp    s3://lancedb-temp-tprf500-bucket/REPORT.md .        # the report
+aws s3 sync  s3://lancedb-temp-tprf500-bucket/graphs ./graphs    # its images
+aws s3 sync  s3://lancedb-temp-tprf500-bucket/results ./results  # raw JSON
+aws s3 rm --recursive "s3://lancedb-temp-tprf500-bucket/bigscale"  # teardown the ~4 TB of table data
 ```
 
 `run_ec2.sh` uses a bare venv (not Docker — avoids the IMDSv2 hop-limit gotcha that blocks containers
 from reading instance-role creds), sets `BENCH_S3_REAL=1` (region-only `storage_options`, creds from the
 default AWS chain, plain `s3://` since real S3 has native atomic conditional-PUT), and runs
 `bench_parallel_ingest.py` → `bench_query_degradation.py` → `plots.py` → `report.py`. Knobs:
-`BENCH_N_WRITERS`, `BENCH_PER_TABLE_TARGET_GB`, `BENCH_CHECKPOINTS_GB`, `BENCH_QUERY_SAMPLES`,
-`BENCH_COMPACT_TRPF`. These numbers reflect the **uncapped box, not the 2 vCPU/4 GiB pod** — a ceiling,
-not the prod floor. Version cleanup is intentionally never called (one fewer variable); on-disk size is
-not a reported metric.
+`BENCH_N_WRITERS`, `BENCH_PER_TABLE_TARGET_GB`, `BENCH_CHECKPOINTS_GB`, `BENCH_QUERY_SAMPLES`. Compaction
+`trpf` is **hardcoded to 500** (~2.5 GB/output fragment; 2000 OOM'd an 8-core box). These numbers reflect
+the **uncapped box, not the 2 vCPU/4 GiB pod** — a ceiling, not the prod floor. Version cleanup is
+intentionally never called (one fewer variable); on-disk size is not a reported metric.
+
+**Resilience (built for an unattended overnight run):** every stage snapshots its consolidated `*.json`
+after each unit of work (each ingest checkpoint, each query axis) — written atomically (temp+rename) — and
+append-logs fine detail to crash-safe `*.jsonl` (`ingest_events`, `ingest_samples`, `sweep_results`,
+`query_cells` with **raw per-query latencies**, `compaction_heartbeat`, `compaction_probe`, `run_meta` with
+host/instance info). A background job syncs `results/` to S3 every 5 min. So an OOM / spot-reclaim / SSH
+drop loses at most the last in-flight unit. Resume the query stage without re-ingesting via
+`BENCH_SKIP_INGEST=1 ./run_ec2.sh` (add `BENCH_SKIP_COMPACTION=1` to skip the memory-risky compaction).
 
 ## What it measures
 
