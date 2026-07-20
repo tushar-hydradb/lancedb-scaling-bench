@@ -6,8 +6,8 @@ import glob
 import json
 import os
 
-RESULTS_DIR = "/results"
-GRAPHS_DIR = "/results/graphs"
+RESULTS_DIR = os.environ.get("BENCH_RESULTS_DIR", "/results")
+GRAPHS_DIR = os.path.join(RESULTS_DIR, "graphs")
 
 
 def load() -> dict:
@@ -136,6 +136,74 @@ def section_optimize(d: dict) -> str:
     return s
 
 
+def section_parallel_ingest(d: dict) -> str:
+    cfg = d.get("config", {})
+    agg = d.get("aggregate", {})
+    sweep = d.get("sweep_writers", [])
+    writers = d.get("writers", [])
+    s = "### Large-scale (>1 TB) — parallel ingest\n\n"
+    s += (f"**{cfg.get('n_writers')} writers × ~{cfg.get('per_table_target_gb')} GB** connector tables, "
+          f"gaussian `data` (mean {(cfg.get('mean_bytes') or 0)/1e6:.1f} MB / std "
+          f"{(cfg.get('std_bytes') or 0)/1e6:.1f} MB), {cfg.get('rows_per_array')} rows/array "
+          f"(~1 GB, ~72σ under the 2 GB int32 offset cap), schema "
+          f"`{'large_string' if cfg.get('use_large') else 'string'}`, seed {cfg.get('seed')}.\n\n")
+    s += "**Writer-scaling sweep — aggregate throughput vs concurrent writers:**\n\n"
+    s += table(sweep, ["n_writers", "per_table_target_gb", "agg_mb_per_s", "agg_rows_per_s",
+                       "scaling_efficiency", "wall_s"])
+    s += (f"\n**Primary build:** {agg.get('n_writers')} writers → aggregate **{agg.get('agg_mb_per_s')} MB/s** "
+          f"/ {agg.get('agg_rows_per_s')} rows/s, {round((agg.get('total_data_bytes') or 0)/1e9,1)} GB in "
+          f"{round((agg.get('wall_s') or 0)/60,1)} min. Per-writer MB/s: {agg.get('per_writer_mb_per_s')}.\n\n")
+    if writers:
+        te = writers[0]
+        s += f"**Ingest vs size — `{te.get('table')}` checkpoints** (does write slow as the table grows?):\n\n"
+        s += table(te.get("checkpoints", []), ["target_gb", "rows", "fragments", "version",
+                                               "interval_mb_per_s", "interval_rows_per_s", "cum_wall_s", "rss_mb"])
+    s += ("\nThe **version** column is the dataset version at each size — the query bench opens exactly "
+          "these to read a table *as it was* at 100/250/500/1000 GB (versions are intact; cleanup is off).\n\n")
+    return s
+
+
+def section_query_degradation(d: dict) -> str:
+    cfg = d.get("config", {})
+    cells = d.get("cells", [])
+    probe = d.get("compaction_probe", {})
+
+    def sel(**kw):
+        return [c for c in cells if all(c.get(k) == v for k, v in kw.items())]
+
+    s = "### Large-scale (>1 TB) — query degradation\n\n"
+    s += (f"Query unit: windowed `cursor` keyset scan, W={cfg.get('window')} rows, "
+          f"{cfg.get('samples')} samples/cell ({cfg.get('warmup')} warm-up discarded), random offset "
+          f"per query. Default probe size {cfg.get('default_gb')} GB.\n\n")
+    s += "**Latency vs table size** (windowed_full — payload IO included):\n\n"
+    s += table(sorted(sel(axis="size", variant="windowed_full"), key=lambda x: x["table_gb"]),
+               ["table_gb", "fragments", "p50_ms", "p95_ms", "p99_ms", "qps", "mb_per_s"])
+    s += "\n**Latency vs table size** (metadata_only — isolates fragment/plan cost):\n\n"
+    s += table(sorted(sel(axis="size", variant="metadata_only"), key=lambda x: x["table_gb"]),
+               ["table_gb", "fragments", "p50_ms", "p95_ms", "p99_ms", "qps"])
+    s += "\n**Same table vs different tables:**\n\n"
+    s += table(sel(axis="layout"), ["layout", "table_gb", "n_tables", "p50_ms", "p95_ms", "p99_ms", "qps"])
+    s += "\n**Busy neighbors** — conn_0 latency while K workers hammer the same/other tables:\n\n"
+    s += table(sorted(sel(axis="neighbor"), key=lambda x: (str(x.get("load")), x.get("k", 0))),
+               ["load", "k", "p50_ms", "p95_ms", "p99_ms", "neighbor_qps", "peak_cpu_cores"])
+    s += "\n**Table-count sweep** — single-table query latency vs catalog-listing latency:\n\n"
+    s += table(sorted(sel(axis="table_count"), key=lambda x: x["n_tables"]),
+               ["n_tables", "p50_ms", "p95_ms", "p99_ms", "list_p50_ms", "list_p95_ms"])
+    s += "\n**One compaction — before vs after (identical table size):**\n\n"
+    s += table([c for c in sel(axis="compaction") if c.get("variant") == "windowed_full"],
+               ["state", "table_gb", "fragments", "p50_ms", "p95_ms", "p99_ms", "qps"])
+    if probe.get("oom"):
+        s += f"\n> ⚠️ **FINDING:** the single compaction **OOM-killed** — `{probe.get('error')}`.\n"
+    elif probe.get("error"):
+        s += f"\n> Compaction error: `{probe.get('error')}`\n"
+    else:
+        s += (f"\n> One compaction ({probe.get('fragments_before')} → {probe.get('fragments_after')} fragments, "
+              f"target_rows_per_fragment={probe.get('target_rows_per_fragment')}) took **{probe.get('wall_s')} s**, "
+              f"{probe.get('cpu_s')} CPU-s, peak RSS **{probe.get('peak_rss_mb')} MB**. No `cleanup_old_versions` "
+              f"was run — superseded fragments remain (kept on purpose to remove that variable).\n")
+    return s + "\n"
+
+
 LEVERS = """### Scaling levers → how each moves the ceiling
 
 | Lever | Effect on ceiling |
@@ -161,6 +229,8 @@ def section_graphs() -> str:
         ("Time-series — CPU/mem vs query count (per pattern)", [p for p in pngs if p.startswith("ts_")]),
         ("Row count vs storage — by optimize() cadence", [p for p in pngs if p.startswith("optimize_")]),
         ("Vertical scaling — instances added while queries run", [p for p in pngs if p.startswith("scaling_")]),
+        ("Large-scale (>1 TB) — parallel ingest", [p for p in pngs if p.startswith("ingest_")]),
+        ("Large-scale (>1 TB) — query degradation", [p for p in pngs if p.startswith("query_")]),
     ]
     s = ("### Graphs\n\n_Rendered from real runs; see `results/graphs/`._\n\n"
          "**What the graphs show (measured, not modelled):**\n"
@@ -174,7 +244,15 @@ def section_graphs() -> str:
          "small append-fragments store the same rows far less efficiently. ▲ marks the transient ~2× "
          "spike during compaction (old+new coexist) reclaimed by `cleanup_old_versions`.\n"
          "- **CPU/mem vs query count** (`ts_*`): scans hold <1 core with an RSS sawtooth per "
-         "materialisation; merge_insert is the CPU-heaviest write pattern.\n\n")
+         "materialisation; merge_insert is the CPU-heaviest write pattern.\n"
+         "- **Read-ops dips at each instance-add were a plot artifact, now fixed.** Throughput is "
+         "`Δagg_ops/Δt`; spawning an instance briefly stretches the one sampler interval that straddles "
+         "it, so a constant-rate counter dips then rebounds (the identical dip appeared in the write "
+         "profile — proof it's harness-level, not LanceDB). `_throughput` now averages over a ~1 s "
+         "trailing window, removing the aliasing while keeping the true ramp/plateau.\n"
+         "- **Large-scale (`ingest_*`, `query_*`):** parallel ingest to ~1 TB/table on real S3, query "
+         "latency vs table size, fragment count (one compaction), table count, and busy neighbors — see "
+         "the two large-scale sections above for the numbers.\n\n")
     for title, items in groups:
         if not items:
             continue
@@ -195,9 +273,17 @@ CAVEAT = """### Caveats
   upper bound; on-disk bytes are far smaller. rows/s and latency are unaffected.
 - **On-disk bytes include superseded versions** until `cleanup_old_versions` runs (visible as
   rewrite_amplification in Q7 and the >logical on-disk size in Q6).
-- All numbers are under the capped container (see cap label); they are a *floor* on real hardware,
-  not a hardware benchmark. Vector index build (IVF_PQ) took ~147s on 200k×768 under 2 vCPU —
+- All small-scale numbers are under the capped container (see cap label); they are a *floor* on real
+  hardware, not a hardware benchmark. Vector index build (IVF_PQ) took ~147s on 200k×768 under 2 vCPU —
   index construction is the CPU-heaviest single op measured.
+- **The large-scale (>1 TB) suite runs UNCAPPED on the full EC2 box against real AWS S3.** Those
+  latencies/throughputs reflect that box, **not** the 2 vCPU / 4 GiB MOVEIT pod — they are a *ceiling*,
+  the opposite end from the capped floor above. Real S3 (native atomic conditional-PUT, per-connector
+  single writer) also means no DynamoDB commit store is used there.
+- **Version count grows unbounded in the large-scale suite** because `cleanup_old_versions` is
+  intentionally never called (one fewer variable). The per-checkpoint `version` values are recorded so
+  any manifest-load slowdown is attributable, not hidden. Delete the tables from S3 after capturing
+  `results/` to stop storage billing.
 """
 
 
@@ -206,7 +292,8 @@ def main() -> None:
     caps = sorted({d.get("cap_label", "?") for d in data.values()})
     md = ["# LanceDB Scaling Characterization — Report\n",
           f"_Resource cap(s): **{', '.join(caps)}** (disk uncapped). LanceDB pinned to prod "
-          "version (lancedb 0.33.0). Backend: MinIO (S3) + DynamoDB-local._\n"]
+          "version (lancedb 0.33.0). Backend: MinIO + DynamoDB-local for the capped local suite; "
+          "real AWS S3 (uncapped EC2) for the large-scale (>1 TB) suite._\n"]
 
     if "write" in data:
         md.append(section_write(data["write"]))
@@ -218,6 +305,10 @@ def main() -> None:
         md.append(section_cap(data["cap2gb"]))
     if "optimize" in data:
         md.append(section_optimize(data["optimize"]))
+    if "parallel_ingest" in data:
+        md.append(section_parallel_ingest(data["parallel_ingest"]))
+    if "query_degradation" in data:
+        md.append(section_query_degradation(data["query_degradation"]))
     md.append(section_graphs())
     md.append(LEVERS)
     md.append(CAVEAT)

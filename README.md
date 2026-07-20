@@ -14,6 +14,31 @@ docker compose down -v    # tear down (removes the MinIO volume)
 
 Output: `results/REPORT.md` (rendered answers to the seven questions) + `results/*.json` (raw).
 
+## Large-scale (>1 TB) run — EC2 + real AWS S3
+
+The capped local suite above answers the *small-scale* envelope. The question of how a single
+connector table scales **to and past 1 TB**, how fast we can ingest into many such tables **in
+parallel**, and how **queries tank** (as the table grows, as fragments grow vs one compaction, as the
+table count grows, and under **busy neighbors**) needs real object storage — MinIO on a laptop can't
+hold multiple terabytes. That suite runs **uncapped on an EC2 box against real AWS S3**:
+
+```sh
+# on the EC2 box (IAM instance role attached), after scp/clone of this repo:
+export BENCH_BUCKET=<your-bucket> AWS_REGION=<region>
+BENCH_SMOKE=1 ./run_ec2.sh    # dry run: 2x1 GB, validates IAM + measures real EC2->S3 MB/s
+./run_ec2.sh                  # full: 4 tables x ~1 TB (~4 TB in S3)
+aws s3 rm --recursive "s3://$BENCH_BUCKET/bigscale"   # teardown to stop storage billing
+```
+
+`run_ec2.sh` uses a bare venv (not Docker — avoids the IMDSv2 hop-limit gotcha that blocks containers
+from reading instance-role creds), sets `BENCH_S3_REAL=1` (region-only `storage_options`, creds from the
+default AWS chain, plain `s3://` since real S3 has native atomic conditional-PUT), and runs
+`bench_parallel_ingest.py` → `bench_query_degradation.py` → `plots.py` → `report.py`. Knobs:
+`BENCH_N_WRITERS`, `BENCH_PER_TABLE_TARGET_GB`, `BENCH_CHECKPOINTS_GB`, `BENCH_QUERY_SAMPLES`,
+`BENCH_COMPACT_TRPF`. These numbers reflect the **uncapped box, not the 2 vCPU/4 GiB pod** — a ceiling,
+not the prod floor. Version cleanup is intentionally never called (one fewer variable); on-disk size is
+not a reported metric.
+
 ## What it measures
 
 | Bench | Question answered |
@@ -26,6 +51,8 @@ Output: `results/REPORT.md` (rendered answers to the seven questions) + `results
 | `bench_timeseries.py` | **Graph:** container CPU/mem vs cumulative query count, per read/write pattern |
 | `bench_optimize_intervals.py` | **Graph:** row count vs on-disk storage, with `optimize()` at different cadences (storage sawtooth) |
 | `bench_scaling.py` | **Graph:** throughput + CPU/mem while instances are added live (vertical-scaling ceiling) |
+| `bench_parallel_ingest.py` | **(EC2/S3)** parallel ingest to 4×~1 TB connector tables; writer-scaling sweep; interval throughput at size checkpoints (records dataset versions) |
+| `bench_query_degradation.py` | **(EC2/S3)** query latency vs table size, same/different tables, one compaction, table count, and busy neighbors |
 | `plots.py` | Renders the above JSON into PNGs under `results/graphs/` |
 
 Graphs use a container-level cgroup v2 sampler (`CgroupSampler` in `common.py`) reading `cpu.stat`/`memory.current`, so they capture **all** instances, not just one process.

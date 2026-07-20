@@ -13,12 +13,13 @@ import json
 import os
 
 import matplotlib
+import numpy as np
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-RESULTS = "/results"
-GRAPHS = "/results/graphs"
+RESULTS = os.environ.get("BENCH_RESULTS_DIR", "/results")
+GRAPHS = os.path.join(RESULTS, "graphs")
 
 
 def _load(name: str):
@@ -126,14 +127,25 @@ def plot_optimize_storage(data) -> None:
 
 
 # --- 3. scaling: throughput & cpu/mem vs time -------------------------------
-def _throughput(samples: list[dict]) -> tuple[list[float], list[float]]:
+def _throughput(samples: list[dict], win_s: float = 1.0) -> tuple[list[float], list[float]]:
+    """Rolling throughput over a trailing ~win_s window.
+
+    Adjacent-sample deltas (b-a) alias badly: a spawned instance briefly stretches
+    the one sampler interval that straddles it, so a constant-rate counter dips
+    then rebounds — a plot artifact (identical dip appears in the write profile),
+    not a real throughput drop. Averaging over >=1s of samples removes it while
+    preserving the true ramp/plateau shape.
+    """
     ts, tp = [], []
-    for a, b in zip(samples, samples[1:]):
-        dt = b["t"] - a["t"]
+    for k in range(1, len(samples)):
+        i = k - 1
+        while i > 0 and samples[k]["t"] - samples[i]["t"] < win_s:
+            i -= 1
+        dt = samples[k]["t"] - samples[i]["t"]
         if dt <= 0:
             continue
-        d = b.get("agg_ops", 0) - a.get("agg_ops", 0)
-        ts.append(b["t"])
+        d = samples[k].get("agg_ops", 0) - samples[i].get("agg_ops", 0)
+        ts.append(samples[k]["t"])
         tp.append(max(0.0, d / dt))
     return ts, tp
 
@@ -180,6 +192,168 @@ def plot_scaling(data) -> None:
         print(f"[plots] {out}", flush=True)
 
 
+def _save(fig, name: str) -> None:
+    out = os.path.join(GRAPHS, name)
+    fig.savefig(out, dpi=110)
+    plt.close(fig)
+    print(f"[plots] {out}", flush=True)
+
+
+def _legend(ax1, ax2) -> None:
+    lines = [ln for ln in (ax1.get_lines() + ax2.get_lines()) if not ln.get_label().startswith("_")]
+    ax1.legend(lines, [ln.get_label() for ln in lines], fontsize=8)
+
+
+# --- 4. parallel ingest -----------------------------------------------------
+def plot_ingest(data) -> None:
+    cap = data.get("cpu_limit_cores")
+
+    sweep = data.get("sweep_writers", [])
+    if sweep:
+        ns = [r["n_writers"] for r in sweep]
+        agg = [r["agg_mb_per_s"] for r in sweep]
+        base = agg[0] if agg else 0
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.plot(ns, agg, "o-", color="tab:blue", lw=1.6, label="aggregate MB/s (measured)")
+        ax.plot(ns, [base * n for n in ns], "--", color="gray", alpha=0.6, label="perfect-linear (N×single)")
+        ax.set_xlabel("concurrent writers (one table each)")
+        ax.set_ylabel("ingest throughput (MB/s)")
+        ax.set_xticks(ns)
+        ax.set_title("Parallel ingest throughput vs #writers\n(gap below the dashed line = where scaling stops: CPU or NIC/S3)")
+        ax.legend()
+        ax.grid(alpha=0.25)
+        fig.tight_layout()
+        _save(fig, "ingest_throughput_vs_writers.png")
+
+    samples = data.get("samples", [])
+    if samples:
+        t = [s["t"] for s in samples]
+        gb = [s.get("agg_bytes", 0) / 1e9 for s in samples]
+        cpu = [s["cpu_cores"] for s in samples]
+        rss = [s["rss_mb"] / 1000 for s in samples]
+        fig, ax1 = plt.subplots(figsize=(10, 5))
+        ax1.plot(t, gb, color="tab:green", lw=1.6, label="cumulative GB written")
+        ax1.set_xlabel("elapsed time (s)")
+        ax1.set_ylabel("cumulative GB", color="tab:green")
+        ax1.tick_params(axis="y", labelcolor="tab:green")
+        ax2 = ax1.twinx()
+        ax2.plot(t, cpu, color="tab:red", lw=1.1, alpha=0.8, label="CPU (cores)")
+        ax2.plot(t, rss, color="tab:blue", lw=1.0, ls=":", alpha=0.8, label="RSS (GB)")
+        if cap:
+            ax2.axhline(cap, ls="--", color="tab:red", alpha=0.4)
+        ax2.set_ylabel("CPU cores (—) / RSS GB (··)", color="tab:red")
+        ax2.tick_params(axis="y", labelcolor="tab:red")
+        for e in data.get("events", []):
+            if e.get("label") == "checkpoint":
+                ax1.axvline(e["t"], color="gray", ls="--", alpha=0.25)
+        ax1.set_title("Parallel ingest — cumulative GB & CPU/mem over time (checkpoints dashed)")
+        _legend(ax1, ax2)
+        fig.tight_layout()
+        _save(fig, "ingest_timeseries.png")
+
+    writers = data.get("writers", [])
+    series = [te for te in writers if te.get("checkpoints")]
+    if series:
+        fig, ax = plt.subplots(figsize=(9, 5))
+        for te in series:
+            cks = te["checkpoints"]
+            x = [ck["data_bytes"] / 1e9 for ck in cks]
+            y = [ck["interval_mb_per_s"] for ck in cks]
+            ax.plot(x, y, "o-", lw=1.2, label=te["table"])
+        ax.set_xlabel("table size (GB)")
+        ax.set_ylabel("interval ingest MB/s")
+        ax.set_title("Ingest throughput vs table size\n(does write slow as the table / fragment count grows?)")
+        ax.legend(fontsize=8)
+        ax.grid(alpha=0.25)
+        fig.tight_layout()
+        _save(fig, "ingest_mbps_vs_tablesize.png")
+
+
+# --- 5. query degradation ---------------------------------------------------
+_PCTS = (("p50_ms", "tab:green"), ("p95_ms", "tab:orange"), ("p99_ms", "tab:red"))
+
+
+def plot_query(data) -> None:
+    cells = data.get("cells", [])
+
+    for variant in ("windowed_full", "metadata_only"):
+        sc = sorted([c for c in cells if c["axis"] == "size" and c["variant"] == variant],
+                    key=lambda x: x["table_gb"])
+        if not sc:
+            continue
+        x = [c["table_gb"] for c in sc]
+        fig, ax = plt.subplots(figsize=(9, 5))
+        for p, col in _PCTS:
+            ax.plot(x, [c[p] for c in sc], "o-", color=col, label=p)
+        ax.set_xlabel("table size (GB)")
+        ax.set_ylabel("latency (ms)")
+        ax.set_title(f"Query latency vs table size — {variant}\n(windowed cursor scan; ~1 TB toward the right)")
+        ax.legend()
+        ax.grid(alpha=0.25)
+        fig.tight_layout()
+        _save(fig, f"query_pXX_vs_size_{variant}.png")
+
+    tc = sorted([c for c in cells if c["axis"] == "table_count"], key=lambda x: x["n_tables"])
+    if tc:
+        x = [c["n_tables"] for c in tc]
+        fig, ax1 = plt.subplots(figsize=(9, 5))
+        for p, col in _PCTS:
+            ax1.plot(x, [c[p] for c in tc], "o-", color=col, label=f"query {p}")
+        ax1.set_xlabel("number of tables in the store")
+        ax1.set_ylabel("single-table query latency (ms)")
+        ax1.set_xticks(x)
+        ax2 = ax1.twinx()
+        ax2.plot(x, [c.get("list_p50_ms", 0) for c in tc], "s--", color="tab:blue", label="catalog list p50")
+        ax2.set_ylabel("table_names() listing (ms)", color="tab:blue")
+        ax2.tick_params(axis="y", labelcolor="tab:blue")
+        ax1.set_title("Query & catalog-listing latency vs #tables\n(single-table reads are independent; only listing grows)")
+        _legend(ax1, ax2)
+        fig.tight_layout()
+        _save(fig, "query_latency_vs_tables.png")
+
+    cc = [c for c in cells if c["axis"] == "compaction" and c["variant"] == "windowed_full"]
+    if len(cc) >= 2:
+        metrics = ["p50_ms", "p95_ms", "p99_ms"]
+        x = np.arange(len(metrics))
+        w = 0.35
+        fig, ax = plt.subplots(figsize=(8, 5))
+        for i, st in enumerate(["uncompacted", "compacted"]):
+            cell = next((c for c in cc if c["state"] == st), None)
+            if not cell:
+                continue
+            ax.bar(x + (i - 0.5) * w, [cell[m] for m in metrics], w,
+                   label=f"{st} ({cell.get('fragments')} frags)")
+        ax.set_xticks(x)
+        ax.set_xticklabels(metrics)
+        ax.set_ylabel("latency (ms)")
+        ax.set_title("Query latency: uncompacted vs one compaction (same table size)")
+        ax.legend()
+        ax.grid(alpha=0.25, axis="y")
+        fig.tight_layout()
+        _save(fig, "query_compacted_vs_not.png")
+
+    nb = [c for c in cells if c["axis"] == "neighbor"]
+    if nb:
+        order = ([c for c in nb if c["load"] == "idle"]
+                 + sorted([c for c in nb if c["load"] == "same"], key=lambda x: x["k"])
+                 + sorted([c for c in nb if c["load"] == "other"], key=lambda x: x["k"]))
+        labels = ["idle" if c["load"] == "idle" else f"{c['load']}×{c['k']}" for c in order]
+        x = np.arange(len(order))
+        fig, ax1 = plt.subplots(figsize=(10, 5))
+        for p, col in _PCTS:
+            ax1.plot(x, [c[p] for c in order], "o-", color=col, label=p)
+        ax1.set_xticks(x)
+        ax1.set_xticklabels(labels, rotation=30, ha="right")
+        ax1.set_ylabel("conn_0 query latency (ms)")
+        ax2 = ax1.twinx()
+        ax2.plot(x, [c.get("neighbor_qps", 0) for c in order], "s--", color="gray", alpha=0.6, label="neighbor qps")
+        ax2.set_ylabel("neighbor throughput (qps)", color="gray")
+        ax1.set_title("Query latency vs busy neighbors (same table vs other tables)")
+        _legend(ax1, ax2)
+        fig.tight_layout()
+        _save(fig, "query_latency_vs_neighbor.png")
+
+
 def main() -> None:
     os.makedirs(GRAPHS, exist_ok=True)
     ts = _load("timeseries")
@@ -191,6 +365,12 @@ def main() -> None:
     sc = _load("scaling")
     if sc:
         plot_scaling(sc)
+    ing = _load("parallel_ingest")
+    if ing:
+        plot_ingest(ing)
+    qd = _load("query_degradation")
+    if qd:
+        plot_query(qd)
     print("[plots] done", flush=True)
 
 
