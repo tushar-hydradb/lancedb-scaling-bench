@@ -42,10 +42,12 @@ REAL_S3 = os.environ.get("BENCH_S3_REAL") == "1"
 
 S3_ENDPOINT = os.environ.get("S3_ENDPOINT", "http://minio:9000")
 DDB_ENDPOINT = os.environ.get("DDB_ENDPOINT", "http://ddb:8000")
-REGION = os.environ.get("AWS_REGION", "us-east-1")
+# Region: the creds' default (AWS_REGION / AWS_DEFAULT_REGION, which run_ec2.sh
+# resolves from aws-config or EC2 IMDS); us-east-1 only as a last-resort fallback.
+REGION = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "us-east-1"
 ACCESS_KEY = os.environ.get("AWS_ACCESS_KEY_ID", "minioadmin")
 SECRET_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "minioadmin")
-BUCKET = os.environ.get("BENCH_BUCKET", "lance-bench")
+BUCKET = os.environ.get("BENCH_BUCKET", "lancedb-temp-bucket")
 DDB_COMMIT_TABLE = os.environ.get("DDB_COMMIT_TABLE", "lance_commits")
 CAP_LABEL = os.environ.get("BENCH_CAP_LABEL", "unknown")
 

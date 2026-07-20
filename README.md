@@ -23,11 +23,12 @@ table count grows, and under **busy neighbors**) needs real object storage — M
 hold multiple terabytes. That suite runs **uncapped on an EC2 box against real AWS S3**:
 
 ```sh
-# on the EC2 box (IAM instance role attached), after scp/clone of this repo:
-export BENCH_BUCKET=<your-bucket> AWS_REGION=<region>
+# on the EC2 box (IAM instance role attached), after scp/clone of this repo.
+# Bucket defaults to lancedb-temp-bucket; region is taken from the creds' default
+# (aws config / IMDS). Override with BENCH_BUCKET / AWS_REGION if needed.
 BENCH_SMOKE=1 ./run_ec2.sh    # dry run: 2x1 GB, validates IAM + measures real EC2->S3 MB/s
 ./run_ec2.sh                  # full: 4 tables x ~1 TB (~4 TB in S3)
-aws s3 rm --recursive "s3://$BENCH_BUCKET/bigscale"   # teardown to stop storage billing
+aws s3 rm --recursive "s3://lancedb-temp-bucket/bigscale"   # teardown to stop storage billing
 ```
 
 `run_ec2.sh` uses a bare venv (not Docker — avoids the IMDSv2 hop-limit gotcha that blocks containers

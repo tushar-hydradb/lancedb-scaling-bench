@@ -10,7 +10,9 @@
 #   * an IAM instance role granting s3:{Get,Put,List,Delete}Object + s3:ListBucket
 #     on the target bucket (the default AWS credential chain picks it up)
 #   * python3.11+ with the venv module, and git-cloned/scp'd this repo
-#   * export BENCH_BUCKET=<your-bucket>   AWS_REGION=<region>
+#
+# Bucket defaults to lancedb-temp-bucket; region is taken from the creds' default
+# (aws config, or EC2 IMDS). Override either with BENCH_BUCKET / AWS_REGION.
 #
 # Recommended first pass (validates IAM + measures real EC2->S3 MB/s before you
 # commit to ~4 TB): BENCH_SMOKE=1 ./run_ec2.sh
@@ -18,8 +20,21 @@
 # Teardown after capturing results/: aws s3 rm --recursive "s3://$BENCH_BUCKET/bigscale"
 set -euo pipefail
 
-: "${BENCH_BUCKET:?set BENCH_BUCKET to your S3 bucket}"
-: "${AWS_REGION:?set AWS_REGION (e.g. us-east-1)}"
+export BENCH_BUCKET="${BENCH_BUCKET:-lancedb-temp-bucket}"
+
+# Region = the creds' default. Resolve from aws-config, then EC2 IMDS; fall back
+# to us-east-1. Export both names so boto3 and Lance's object_store agree.
+if [ -z "${AWS_REGION:-}" ]; then
+  AWS_REGION="$(aws configure get region 2>/dev/null || true)"
+fi
+if [ -z "${AWS_REGION:-}" ]; then
+  _tok="$(curl -sS -X PUT 'http://169.254.169.254/latest/api/token' \
+          -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' 2>/dev/null || true)"
+  AWS_REGION="$(curl -sS -H "X-aws-ec2-metadata-token: $_tok" \
+          'http://169.254.169.254/latest/meta-data/placement/region' 2>/dev/null || true)"
+fi
+: "${AWS_REGION:=us-east-1}"
+export AWS_REGION AWS_DEFAULT_REGION="$AWS_REGION"
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 VENV="$ROOT/.venv"
