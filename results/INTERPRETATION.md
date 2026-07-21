@@ -179,6 +179,68 @@ was a different scale (1 TB vs 500 GB) — the honest contrast is the within-run
 one above, on one box at one scale. See `graphs/cadence_rss_vs_turn.png`,
 `cadence_wall_vs_turn.png`, `cadence_fragments_vs_turn.png`._
 
+## 6. Can Rust `CompactionOptions` cap compaction RAM + wall? (250 GB, real lance 8.0.0)
+
+§1/§5 measured compaction through **pylance 0.33**, whose binding exposes only `num_threads` of
+the three knobs. MOVEIT links the **Rust `lance = "8.0.0"`** crate directly, which exposes all
+three (`num_threads`, `max_source_fragments`, `io_buffer_size`). So the actionable question —
+*can we cap the 20 GB turn-1 spike from §5 in code?* — has to be answered against the Rust crate,
+not the Python binding. I built a small all-Rust bench (`rust-compaction-knobs/`, lance 8.0.0 +
+arrow 58 pinned to MOVEIT's exact versions, MOVEIT's 8-column drain schema, real S3), cross-compiled
+it to aarch64, and swept the knobs on a 250 GB uncompacted backlog (250 fragments of 200 rows / ~1 GB
+logical each) on an 8-vCPU / 30 GB Graviton box. Each config runs as a **fresh process** that first
+`checkout_version(seed).restore()`s the identical backlog, then times ONE `compact_files` and reports
+`VmHWM` (kernel peak RSS). Raw: `results/rust-knobs/knobs_results.jsonl`; plot:
+`results/rust-knobs/knobs_rss_wall_vs_threads.png`.
+
+**`num_threads` IS a near-linear peak-RSS dial — and the only one of the three that is.**
+Compacting the same 250→166-fragment backlog at `trpf=500`:
+
+| num_threads | peak RSS | wall | speedup vs t1 |
+|---|---|---|---|
+| 1 | **4.3 GiB** | 238.9 s | 1.0× |
+| 2 | **6.7 GiB** | 122.4 s | 1.95× |
+| 4 | **12.5 GiB** | 68.7 s | 3.48× |
+| 8 | **21.4 GiB** | 50.5 s | 4.73× |
+| default (unset) | 18.4 GiB | 51.5 s | — |
+
+RSS fits **≈ 2.0 GiB + 2.45 GiB × num_threads** (all four points on the line). The mechanism is
+`compact_files` → `buffer_unordered(num_threads.unwrap_or(get_num_compute_intensive_cpus()))`
+(`optimize.rs:790`): each of `num_threads` concurrent tasks holds its own ~`trpf`-sized decode
+buffer, so peak RSS = base + threads × per-task-buffer. This is the same 20 GB working set §1/§5
+saw — it was just running at the default (all cores). **Setting `num_threads` explicitly caps it:**
+`num_threads=1` → 4.3 GiB (a 5× cut vs 8 threads) at a 4.7× wall cost; `num_threads=2` → 6.7 GiB /
+122 s fits an 8 GiB pod. Wall speedup flattens past 4 threads (68→50 s from 4→8): compaction goes
+IO/S3-bound, matching §4's "3.65/8 cores" ingest finding. **`trpf` sets per-task size, `num_threads`
+sets how many run at once — those two are the RAM levers; the default picks ~all cores, which is why
+§5's terminal spike was ~20 GB.**
+
+**`max_source_fragments` is a per-*call* work throttle, NOT a memory knob — and a foot-gun.** It's
+applied as a *global cumulative* source-fragment budget with `take_while` (`optimize.rs:735`), which
+**drops the first task that exceeds the budget and every task after it** — it is not a per-group cap.
+Consequence measured directly: with `trpf` set huge (so `split_for_size` packs all 250 fragments into
+one task), `max_source_fragments ∈ {4, 8, 16}` discarded that single task and compaction did **nothing**
+(0 fragments merged, 56 MB RSS, sub-ms); only the unbounded run merged 250→1. Even where it *does* bind
+(prod `trpf=500`, tasks ≈ 3 frags), it can't lower peak RSS below one `num_threads`-wide wave — it only
+limits how much total backlog one `compact_files` call clears. Useful as "compact N fragments per call,"
+dangerous as a memory lever.
+
+**`io_buffer_size` is immaterial here.** {default, 32 MB, 128 MB} at `num_threads=4`: 12.52 / 12.53 /
+12.83 GiB and 68.7 / 68.1 / 67.6 s — <2.5% RSS, <2% wall. At MOVEIT's fragment sizes the scan-scheduler
+read-ahead buffer is dwarfed by the decode working set.
+
+_Caveat (same as §5): the `'x'`-filler payload is highly compressible, so on-disk/S3 bytes are tiny and
+the wall figures are **logical** decode throughput (~1 GiB/s/thread), not S3-byte throughput — on
+incompressible prod JSON wall would be higher and more S3-bound. Peak RSS is the decompressed working
+set and **is** representative (the smoke run cross-checked 2 GiB logical → 2.48 GiB RSS). aarch64 /
+8-vCPU / 30 GB box, not the MOVEIT pod._
+
+**MOVEIT takeaway:** to run compaction inside a bounded pod, set `CompactionOptions.num_threads`
+explicitly (don't inherit the all-cores default) — `2` for an ~8 GiB pod, `1` for ~5 GiB — and keep
+`trpf` as the query-latency/per-task-size trade. `max_source_fragments` is for *chunking* a large
+backlog across several calls (compact-a-slice-at-a-time), not for capping RAM; never set it below your
+task's fragment count or compaction silently no-ops. `io_buffer_size` can be left at default.
+
 ## What I'd change next
 
 - **Compact incrementally, never let a backlog build — now confirmed (§5).** Paying off a

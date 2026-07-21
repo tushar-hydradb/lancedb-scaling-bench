@@ -1,0 +1,23 @@
+[package]
+name = "compaction-knobs"
+version = "0.1.0"
+edition = "2021"
+
+# Bench: does lance 8.0.0's CompactionOptions actually change compaction peak-RSS
+# and wall time? Pins mirror MOVEIT (lance 8.0.0, arrow 58) so the numbers reflect
+# the exact crate MOVEIT links.
+[dependencies]
+lance = { version = "8.0.0", default-features = false, features = ["aws"] }
+arrow-array = "58"
+arrow-schema = { version = "58", features = ["canonical_extension_types"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+futures = "0.3"
+serde_json = "1"
+
+[[bin]]
+name = "compaction-knobs"
+path = "src/main.rs"
+
+# Keep binaries lean; full debuginfo from lance/datafusion balloons link size.
+[profile.release]
+debug = false

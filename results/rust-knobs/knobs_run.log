@@ -1,0 +1,50 @@
+[driver] uri=s3://lancedb-temp-tprf500-bucket/rust-knobs/table seed=250GB region=us-east-1 out=/home/teammate/knobs_results.jsonl
+[driver] seeding 250GB backlog (long part; ~1h at ~70MB/s)…
+[seed] uri=s3://lancedb-temp-tprf500-bucket/rust-knobs/table target=250GB rows=50000 rows/frag=200 mean=5000000B (=> ~250 fragments, all under trpf)
+[seed] done rows=50000 fragments=250 version=1 wall_s=307.0
+[driver] seeded version=1
+[driver] === A_threads=1  trpf=500 threads=1 msf=- io=-  14:02:53 ===
+[compact] A_threads=1: peak_rss=4432MB wall=238.9s frags 250->166
+{"fragments_added":166,"fragments_after":166,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":null,"label":"A_threads=1","max_source_fragments":null,"num_threads":1,"peak_rss_mb":4431.5078125,"trpf":500,"wall_s":238.905203551}
+[driver] === A_threads=2  trpf=500 threads=2 msf=- io=-  14:06:52 ===
+[compact] A_threads=2: peak_rss=6819MB wall=122.4s frags {"fragments_added":166,"fragments_after":166,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":null,"label":"A_threads=2","max_source_fragments":null,"num_threads":2,"peak_rss_mb":6819.0234375,"trpf":500,"wall_s":122.44680687}
+250->166
+[driver] === A_threads=4  trpf=500 threads=4 msf=- io=-  14:08:55 ===
+[compact] A_threads=4: peak_rss=12824MB wall=68.7s frags 250->166
+{"fragments_added":166,"fragments_after":166,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":null,"label":"A_threads=4","max_source_fragments":null,"num_threads":4,"peak_rss_mb":12823.75,"trpf":500,"wall_s":68.688095554}
+[driver] === A_threads=8  trpf=500 threads=8 msf=- io=-  14:10:04 ===
+[compact] A_threads=8: peak_rss=21883MB wall=50.5s frags 250->166
+{"fragments_added":166,"fragments_after":166,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":null,"label":"A_threads=8","max_source_fragments":null,"num_threads":8,"peak_rss_mb":21882.734375,"trpf":500,"wall_s":50.511584103}
+[driver] === A_default  trpf=500 threads=- msf=- io=-  14:10:55 ===
+[compact] A_default: peak_rss=18809MB wall=51.5s frags 250->{"fragments_added":166,"fragments_after":166,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":null,"label":"A_default","max_source_fragments":null,"num_threads":null,"peak_rss_mb":18808.62109375,"trpf":500,"wall_s":51.451708565}
+166
+[driver] === B_msf=4_t2  trpf=1000000000 threads=2 msf=4 io=-  14:11:47 ===
+[compact] B_msf=4_t2: peak_rss=58MB wall=0.0s frags {"fragments_added":0,"fragments_after":250,"fragments_before":250,"fragments_removed":0,"io_buffer_mb":null,"label":"B_msf=4_t2","max_source_fragments":4,"num_threads":2,"peak_rss_mb":57.54296875,"trpf":1000000000,"wall_s":0.000621145}
+250->250
+[driver] === B_msf=8_t2  trpf=1000000000 threads=2 msf=8 io=-  14:11:47 ===
+[compact] B_msf=8_t2: peak_rss=55MB wall=0.0s frags 250->250
+{"fragments_added":0,"fragments_after":250,"fragments_before":250,"fragments_removed":0,"io_buffer_mb":null,"label":"B_msf=8_t2","max_source_fragments":8,"num_threads":2,"peak_rss_mb":55.38671875,"trpf":1000000000,"wall_s":0.00053251}
+[driver] === B_msf=16_t2  trpf=1000000000 threads=2 msf=16 io=-  14:11:47 ===
+[compact] B_msf=16_t2: peak_rss=56MB wall=0.0s frags 250->250
+{"fragments_added":0,"fragments_after":250,"fragments_before":250,"fragments_removed":0,"io_buffer_mb":null,"label":"B_msf=16_t2","max_source_fragments":16,"num_threads":2,"peak_rss_mb":56.1484375,"trpf":1000000000,"wall_s":0.00054911}
+[driver] === B_msf=none_t2  trpf=1000000000 threads=2 msf=- io=-  14:11:48 ===
+[compact] B_msf=none_t2: peak_rss=6451MB wall=221.1s frags 250->1{"fragments_added":1,"fragments_after":1,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":null,"label":"B_msf=none_t2","max_source_fragments":null,"num_threads":2,"peak_rss_mb":6451.09765625,"trpf":1000000000,"wall_s":221.143955965}
+
+[driver] === C_io=32_t4  trpf=500 threads=4 msf=- io=32  14:15:29 ===
+[compact] C_io=32_t4: peak_rss=12827MB wall=68.1s frags 250->166
+{"fragments_added":166,"fragments_after":166,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":32,"label":"C_io=32_t4","max_source_fragments":null,"num_threads":4,"peak_rss_mb":12827.21875,"trpf":500,"wall_s":68.058183219}
+[driver] === C_io=128_t4  trpf=500 threads=4 msf=- io=128  14:16:38 ===
+[compact] C_io=128_t4: peak_rss=13135MB wall=67.6s frags 250->166
+{"fragments_added":166,"fragments_after":166,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":128,"label":"C_io=128_t4","max_source_fragments":null,"num_threads":4,"peak_rss_mb":13134.734375,"trpf":500,"wall_s":67.635043815}
+[driver] DONE 14:17:46. results:
+{"fragments_added":166,"fragments_after":166,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":null,"label":"A_threads=1","max_source_fragments":null,"num_threads":1,"peak_rss_mb":4431.5078125,"trpf":500,"wall_s":238.905203551}
+{"fragments_added":166,"fragments_after":166,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":null,"label":"A_threads=2","max_source_fragments":null,"num_threads":2,"peak_rss_mb":6819.0234375,"trpf":500,"wall_s":122.44680687}
+{"fragments_added":166,"fragments_after":166,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":null,"label":"A_threads=4","max_source_fragments":null,"num_threads":4,"peak_rss_mb":12823.75,"trpf":500,"wall_s":68.688095554}
+{"fragments_added":166,"fragments_after":166,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":null,"label":"A_threads=8","max_source_fragments":null,"num_threads":8,"peak_rss_mb":21882.734375,"trpf":500,"wall_s":50.511584103}
+{"fragments_added":166,"fragments_after":166,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":null,"label":"A_default","max_source_fragments":null,"num_threads":null,"peak_rss_mb":18808.62109375,"trpf":500,"wall_s":51.451708565}
+{"fragments_added":0,"fragments_after":250,"fragments_before":250,"fragments_removed":0,"io_buffer_mb":null,"label":"B_msf=4_t2","max_source_fragments":4,"num_threads":2,"peak_rss_mb":57.54296875,"trpf":1000000000,"wall_s":0.000621145}
+{"fragments_added":0,"fragments_after":250,"fragments_before":250,"fragments_removed":0,"io_buffer_mb":null,"label":"B_msf=8_t2","max_source_fragments":8,"num_threads":2,"peak_rss_mb":55.38671875,"trpf":1000000000,"wall_s":0.00053251}
+{"fragments_added":0,"fragments_after":250,"fragments_before":250,"fragments_removed":0,"io_buffer_mb":null,"label":"B_msf=16_t2","max_source_fragments":16,"num_threads":2,"peak_rss_mb":56.1484375,"trpf":1000000000,"wall_s":0.00054911}
+{"fragments_added":1,"fragments_after":1,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":null,"label":"B_msf=none_t2","max_source_fragments":null,"num_threads":2,"peak_rss_mb":6451.09765625,"trpf":1000000000,"wall_s":221.143955965}
+{"fragments_added":166,"fragments_after":166,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":32,"label":"C_io=32_t4","max_source_fragments":null,"num_threads":4,"peak_rss_mb":12827.21875,"trpf":500,"wall_s":68.058183219}
+{"fragments_added":166,"fragments_after":166,"fragments_before":250,"fragments_removed":250,"io_buffer_mb":128,"label":"C_io=128_t4","max_source_fragments":null,"num_threads":4,"peak_rss_mb":13134.734375,"trpf":500,"wall_s":67.635043815}
