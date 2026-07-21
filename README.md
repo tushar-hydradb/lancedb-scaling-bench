@@ -4,6 +4,12 @@ Characterizes the scaling envelope of **LanceDB embedded (OSS)** the way MOVEIT 
 it in production — S3-backed (MinIO), pinned to `lancedb==0.33.0`, inside a container
 **capped to the MOVEIT prod pod limits (2 vCPU / 4 GiB, disk uncapped)**.
 
+> 📖 **[KNOWLEDGE_BASE.md](KNOWLEDGE_BASE.md)** — the durable reference: Lance data model
+> (fragment ↔ `.lance` file ↔ column), sizing knobs, `merge_insert`/upsert fragment behavior,
+> compaction knobs + memory model, indexing (incl. bloom-filter granularity & who builds it),
+> query-latency model, concurrency, and gotchas — each claim cited to lance-8.0.0 source or the
+> benchmark that produced it. Start here when working with LanceDB.
+
 ## Run
 
 ```sh
