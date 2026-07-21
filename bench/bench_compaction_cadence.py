@@ -1,25 +1,27 @@
 """Compaction-cadence bench (Q: does compacting *often* bound OOM risk + wall time?).
 
-Motivation: the one-shot terminal compaction of a 1 TB table (bench_query_degradation)
-peaked at **23.5 GB RSS over 34.7 min**. The hypothesis this bench confirms: if you
-instead compact after every small append, each compaction only ever consolidates the
-*fresh* delta — never re-reading the 500 GB body — so both peak RSS and wall time stay
-low and FLAT across turns, regardless of how large the table (and its un-cleaned version
-history) grows.
+Hypothesis to test: the FIRST compaction of a large, uncompacted table (the accumulated
+drain backlog) is expensive — long wall + high RSS, because it rewrites the whole body.
+But once you're caught up, compacting after each small append is cheap and FLAT, because
+each subsequent compaction only consolidates the fresh delta (the body is now at target
+and is skipped). So the curve should be a big spike on turn 1, then a low plateau.
 
-Design:
-  * Seed one table to ~500 GB, laid out as fragments with MORE rows than `trpf` so
-    compaction treats the seed body as already-optimal and never rewrites it (the
-    realistic drain state: history already compacted, only recent appends are small).
+Design (all ONE local table, so the contrast is within-run — same box, same scale, no
+cross-environment apples-to-oranges):
+  * Seed one table to ~500 GB the way the drain actually lands it: many SMALL fragments
+    (seed_rows_per_array < trpf), i.e. an uncompacted backlog. NOT pre-compacted.
   * Loop `turns` times: read -> append (~0.5 GB) -> compact(trpf). No version cleanup.
+      - Turn 1's compaction hits the full 500 GB backlog  → the expensive one.
+      - Turns 2..N only ever see the small fresh deltas   → cheap + flat.
   * Every op runs in its OWN spawned process, so its peak RSS (Meter, fresh baseline) is
     honestly attributable to *that* op — a long-lived process's RSS high-water would smear
     a cheap op's cost with retained allocations from earlier ops.
   * Records wall_s / cpu_s / peak_rss_mb / fragments / version for every op, appended to
     JSONL after each turn and snapshotted to compaction_cadence.json (crash-safe).
 
-Uses moveit_schema_large() (int64 offsets) so a single seed array can hold >2 GB, letting
-seed fragments exceed `trpf` rows in one commit.
+The headline comparison is turn-1 (backlog) vs the turns-2..N mean (steady state), both
+measured here, locally, at 500 GB. The 1 TB EC2/real-S3 terminal number is NOT a valid
+contrast (different scale AND network) and is only kept as a loosely-labelled aside.
 """
 from __future__ import annotations
 
@@ -34,8 +36,9 @@ import common as c
 
 PREFIX = "cadence"
 TABLE = "conn_cadence"
-# Terminal-compaction reference points (from the 1 TB run, results/compaction_probe.jsonl)
-# so the report/plots can draw the contrast line.
+# 1 TB EC2/real-S3 terminal compaction (results/compaction_probe.jsonl). Kept only as a
+# loosely-labelled aside — NOT a valid contrast to the local 500 GB numbers (different
+# scale AND no network). The real contrast is turn-1 vs steady-state, both measured here.
 TERMINAL_RSS_MB = 23581.8
 TERMINAL_WALL_S = 2081.69
 POD_MEM_MB = 4096  # MOVEIT prod pod cap — the OOM line that matters in production
@@ -50,9 +53,10 @@ def _cfg() -> dict:
         "turns": int(os.environ.get("BENCH_TURNS", 3 if smoke else 50)),
         "append_gb": append_gb,
         "append_rows": max(1, round(append_gb * 1e9 / mean)),
-        # trpf < seed_rows_per_array => the seed body is above target, never recompacted.
+        # seed_rows_per_array < trpf => seed lands as small UNDER-target fragments (an
+        # uncompacted backlog), so turn 1's compaction pays the full-table cost.
         "trpf": int(os.environ.get("BENCH_TRPF", 50 if smoke else 500)),
-        "seed_rows_per_array": int(os.environ.get("BENCH_SEED_RPA", 60 if smoke else 600)),
+        "seed_rows_per_array": int(os.environ.get("BENCH_SEED_RPA", 20 if smoke else 200)),
         "mean_bytes": mean,
         "std_bytes": 1e6,
         "min_bytes": 64000,
@@ -70,7 +74,7 @@ def _uri() -> str:
 # --- isolated op workers (module-level, spawn-picklable) --------------------
 def _append_worker(uri, opts, key_start, rows, mean, std, minb, seed, q) -> None:
     rng = np.random.default_rng(seed)
-    schema = c.moveit_schema_large()
+    schema = c.moveit_schema()  # ~0.5 GB/array, well under the int32 offset cap
     with c.Meter() as m:
         batch = c.make_blob_rows_gaussian(rows, mean, std, int(minb), key_start,
                                           "cadence", rng, schema=schema)
@@ -148,12 +152,12 @@ def _seed(cfg: dict) -> dict:
     measured per-op cost) with progress logged to JSONL."""
     uri = _uri()
     opts = c.storage_options(False)
-    schema = c.moveit_schema_large()
+    schema = c.moveit_schema()  # ~1 GB/array at 200 rows — under the int32 offset cap
     rng = np.random.default_rng(cfg["seed_rng"])
     rpa = cfg["seed_rows_per_array"]
     target_rows = max(rpa, round(cfg["seed_gb"] * 1e9 / cfg["mean_bytes"]))
     print(f"[cadence] seeding ~{cfg['seed_gb']}GB = {target_rows} rows in {rpa}-row "
-          f"fragments (trpf={cfg['trpf']}) ...", flush=True)
+          f"fragments (UNDER trpf={cfg['trpf']} => uncompacted backlog for turn 1) ...", flush=True)
 
     written = 0
     key = 0
@@ -246,15 +250,24 @@ def main() -> None:
               f"ver={rec['version']}", flush=True)
 
     result["partial"] = False
-    # convenience aggregates over the compaction ops
-    comps = [t["compact"] for t in result["turns"] if not t["compact"].get("error")]
-    if comps:
-        rss = [x["peak_rss_mb"] for x in comps]
-        wall = [x["wall_s"] for x in comps]
+    # Headline contrast: turn-1 (full backlog) vs steady-state (turns 2..N) — both here.
+    turns_ok = [t for t in result["turns"] if not t["compact"].get("error")]
+    if turns_ok:
+        backlog = turns_ok[0]["compact"]
+        steady = [t["compact"] for t in turns_ok[1:]]
+
+        def _agg(ops: list[dict]) -> dict:
+            rss = [o["peak_rss_mb"] for o in ops]
+            wall = [o["wall_s"] for o in ops]
+            return {"n": len(ops), "peak_rss_mb_max": max(rss),
+                    "peak_rss_mb_mean": round(sum(rss) / len(rss), 1),
+                    "wall_s_max": max(wall), "wall_s_mean": round(sum(wall) / len(wall), 2)}
+
         result["compact_summary"] = {
-            "n": len(comps),
-            "peak_rss_mb_max": max(rss), "peak_rss_mb_mean": round(sum(rss) / len(rss), 1),
-            "wall_s_max": max(wall), "wall_s_mean": round(sum(wall) / len(wall), 2),
+            "backlog_turn1": {"peak_rss_mb": backlog["peak_rss_mb"], "wall_s": backlog["wall_s"],
+                              "fragments_before": backlog["fragments_before"],
+                              "fragments_after": backlog["fragments_after"]},
+            "steady_state": _agg(steady) if steady else None,
             "any_oom": any(t["compact"].get("oom") for t in result["turns"]),
         }
     snapshot()

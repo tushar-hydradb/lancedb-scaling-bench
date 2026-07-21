@@ -361,8 +361,6 @@ def plot_cadence(data) -> None:
         return
     x = [t["turn"] for t in turns]
     ref = data.get("reference", {})
-    term_rss = ref.get("terminal_rss_mb")
-    term_wall = ref.get("terminal_wall_s")
     pod = ref.get("pod_mem_mb")
     seed_gb = (data.get("seed") or {}).get("data_bytes", 0) / 1e9
 
@@ -370,39 +368,44 @@ def plot_cadence(data) -> None:
         v = t.get(k, {})
         return v.get(f)
 
-    # (a) peak RSS per op per turn, with the terminal-compaction + pod-cap reference lines
+    # (a) peak RSS per op per turn. The story is turn 1 (full backlog) vs the plateau —
+    # both measured in THIS run, locally, at 500 GB (no cross-env reference line).
     fig, ax = plt.subplots(figsize=(10, 5.5))
     ax.plot(x, [op(t, "compact", "peak_rss_mb") for t in turns], "o-", color="tab:red", lw=1.7, label="compact peak RSS")
     ax.plot(x, [op(t, "append", "peak_rss_mb") for t in turns], "s-", color="tab:blue", alpha=0.8, label="append peak RSS")
     ax.plot(x, [op(t, "read", "peak_rss_mb") for t in turns], "^-", color="tab:green", alpha=0.7, label="read peak RSS")
-    if term_rss:
-        ax.axhline(term_rss, ls="--", color="darkred", alpha=0.8,
-                   label=f"terminal 1 TB compaction ({term_rss/1000:.1f} GB)")
     if pod:
         ax.axhline(pod, ls=":", color="black", alpha=0.6, label=f"MOVEIT pod cap ({pod/1024:.0f} GiB)")
+    c0 = op(turns[0], "compact", "peak_rss_mb")
+    if c0:
+        ax.annotate(f"turn 1: full {seed_gb:.0f} GB backlog\n{c0/1024:.1f} GiB",
+                    xy=(1, c0), xytext=(len(x) * 0.28, c0 * 0.9), fontsize=8, color="darkred",
+                    arrowprops=dict(arrowstyle="->", color="darkred", alpha=0.7))
     ax.set_xlabel("turn (read → append ~0.5 GB → compact)")
     ax.set_ylabel("peak RSS (MB, isolated process)")
-    ax.set_title(f"Per-op peak RSS across {len(x)} compact-every-append turns\n"
-                 f"(seed ~{seed_gb:.0f} GB; incremental compaction stays flat & far below the terminal spike)")
-    ax.legend(fontsize=8, loc="center right")
+    ax.set_title(f"Per-op peak RSS — one-time {seed_gb:.0f} GB backlog compaction (turn 1) "
+                 f"vs steady-state (turns 2+)\n(same box, same 500 GB, no version cleanup)")
+    ax.legend(fontsize=8, loc="upper right")
     ax.grid(alpha=0.25)
     ax.set_ylim(bottom=0)
     fig.tight_layout()
     _save(fig, "cadence_rss_vs_turn.png")
 
-    # (b) wall time per op per turn, with terminal-compaction reference
+    # (b) wall time per op per turn — same turn-1-vs-plateau story
     fig, ax = plt.subplots(figsize=(10, 5.5))
     ax.plot(x, [op(t, "compact", "wall_s") for t in turns], "o-", color="tab:red", lw=1.7, label="compact wall")
     ax.plot(x, [op(t, "append", "wall_s") for t in turns], "s-", color="tab:blue", alpha=0.8, label="append wall")
     ax.plot(x, [op(t, "read", "wall_s") for t in turns], "^-", color="tab:green", alpha=0.7, label="read wall")
-    if term_wall:
-        ax.axhline(term_wall, ls="--", color="darkred", alpha=0.8,
-                   label=f"terminal 1 TB compaction ({term_wall/60:.0f} min)")
+    w0 = op(turns[0], "compact", "wall_s")
+    if w0:
+        ax.annotate(f"turn 1: {w0:.0f} s\n(full backlog)", xy=(1, w0),
+                    xytext=(len(x) * 0.28, w0 * 0.85), fontsize=8, color="darkred",
+                    arrowprops=dict(arrowstyle="->", color="darkred", alpha=0.7))
     ax.set_xlabel("turn (read → append ~0.5 GB → compact)")
     ax.set_ylabel("wall time (s, incl. dataset open)")
-    ax.set_title(f"Per-op wall time across {len(x)} turns\n"
-                 f"(each compaction only touches the fresh delta, so it stays flat as the table & version history grow)")
-    ax.legend(fontsize=8)
+    ax.set_title("Per-op wall time — the backlog is paid once (turn 1), then each compaction\n"
+                 "only touches the fresh delta and stays flat as table + version history grow")
+    ax.legend(fontsize=8, loc="upper right")
     ax.grid(alpha=0.25)
     ax.set_ylim(bottom=0)
     fig.tight_layout()
