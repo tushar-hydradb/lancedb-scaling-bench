@@ -219,26 +219,39 @@ def section_compaction_cadence(d: dict) -> str:
           f"Each op runs in its own process so peak RSS is honestly per-op. "
           f"Cap label: **{d.get('cap_label')}** (host {round((d.get('host') or {}).get('mem_total_gb', 0))} GB RAM).\n\n")
     if cs:
-        s += (f"**Result — incremental compaction stays cheap and FLAT across all {cs.get('n')} turns:**\n\n"
-              f"| metric | incremental (this bench) | terminal 1 TB compaction (prior run) |\n"
+        rmax, rmean = cs.get("peak_rss_mb_max", 0), cs.get("peak_rss_mb_mean", 0)
+        term_rss, term_wall = ref.get("terminal_rss_mb") or 0, ref.get("terminal_wall_s") or 0
+        pod = ref.get("pod_mem_mb") or 0
+        rss_x = round(term_rss / rmax, 1) if rmax else 0
+        wall_x = round(term_wall / (cs.get("wall_s_max") or 1))
+        out_gb = round(cfg.get("trpf", 0) * (cfg.get("mean_bytes") or 0) / 1e9, 1)
+        s += (f"**Result — per-compaction cost is bounded by `trpf` (output-fragment size), NOT table size — "
+              f"flat across all {cs.get('n')} turns:**\n\n"
+              f"| metric | incremental (compact every append) | terminal 1 TB compaction (prior run) |\n"
               f"| --- | --- | --- |\n"
-              f"| peak RSS — max / mean | **{cs.get('peak_rss_mb_max')} / {cs.get('peak_rss_mb_mean')} MB** "
-              f"| {ref.get('terminal_rss_mb')} MB |\n"
-              f"| wall — max / mean | **{cs.get('wall_s_max')} / {cs.get('wall_s_mean')} s** "
-              f"| {ref.get('terminal_wall_s')} s |\n"
-              f"| OOM under {round((ref.get('pod_mem_mb') or 0)/1024)} GiB pod cap | "
-              f"**{'YES' if cs.get('peak_rss_mb_max', 0) > (ref.get('pod_mem_mb') or 1e9) else 'no'}** "
-              f"({'any turn OOM-killed' if cs.get('any_oom') else 'no turn OOM-killed'}) "
-              f"| would need { round((ref.get('terminal_rss_mb') or 0)/1024,1)} GiB |\n\n")
-        headroom = "well under" if cs.get("peak_rss_mb_max", 1e9) < (ref.get("pod_mem_mb") or 0) else "above"
-        s += (f"> **Confirmed:** compacting after every append holds peak RSS at "
-              f"~{cs.get('peak_rss_mb_mean')} MB and wall at ~{cs.get('wall_s_mean')} s per turn — "
-              f"{headroom} the {round((ref.get('pod_mem_mb') or 0)/1024)} GiB pod cap — because each "
-              f"compaction only consolidates the fresh ~{cfg.get('append_gb')} GB delta, never re-reading "
-              f"the {round((seed.get('data_bytes') or 0)/1e9)} GB body. It does **not** grow with table "
-              f"size or with the un-cleaned version count. The one-shot terminal compaction of a 1 TB "
-              f"table needed {round((ref.get('terminal_rss_mb') or 0)/1024,1)} GiB RSS and "
-              f"{round((ref.get('terminal_wall_s') or 0)/60)} min by contrast.\n\n")
+              f"| peak RSS — mean / max | **{rmean} / {rmax} MB** ({round(rmax/1024,1)} GiB) "
+              f"| {term_rss} MB ({round(term_rss/1024,1)} GiB) → **{rss_x}× less** |\n"
+              f"| wall — mean / max | **{cs.get('wall_s_mean')} / {cs.get('wall_s_max')} s** "
+              f"| {term_wall} s ({round(term_wall/60)} min) → **~{wall_x}× less** |\n"
+              f"| grows with table size? | **no** (bounded by ~{out_gb} GB output fragment) | yes (whole-table) |\n"
+              f"| any turn OOM-killed | **{'YES' if cs.get('any_oom') else 'no'}** | — |\n\n")
+        pod_note = (f"stays under the {round(pod/1024)} GiB MOVEIT pod cap" if rmax < pod else
+                    f"stays under the {round(pod/1024)} GiB MOVEIT pod cap on average, but the **peak "
+                    f"({round(rmax/1024,1)} GiB) slightly exceeds it**")
+        s += (f"> **Confirmed — compacting often bounds both OOM risk and wall time.** Each compaction "
+              f"only consolidates the fresh ~{cfg.get('append_gb')} GB delta (never re-reading the "
+              f"{round((seed.get('data_bytes') or 0)/1e9)} GB body), so peak RSS and wall stay **flat as "
+              f"the table grows {round((seed.get('data_bytes') or 0)/1e9)}→"
+              f"{round((seed.get('data_bytes') or 0)/1e9 + cfg.get('turns',0)*cfg.get('append_gb',0))} GB "
+              f"and versions pile to {(d.get('turns') or [{}])[-1].get('version')} (cleanup off)** — RSS is "
+              f"bounded by `trpf`, not the table, so it never approaches the terminal run's "
+              f"{round(term_rss/1024,1)} GiB / {round(term_wall/60)} min.\n>\n"
+              f"> **Nuance:** the win is table-size *independence*, not a tiny absolute. At `trpf={cfg.get('trpf')}` "
+              f"(~{out_gb} GB output fragments) the mean is {rmean} MB, which {pod_note}. To fit a smaller pod, "
+              f"lower `trpf` (smaller output fragments → lower peak RSS) — but that leaves more fragments, which "
+              f"the query-degradation finding showed costs read latency (~0.67 ms/fragment). So `trpf` trades "
+              f"**compaction peak-RSS against query latency**; compacting *often* is what removes the *table-size* "
+              f"term from both.\n\n")
     s += "**Per-turn detail** (compaction op):\n\n"
     rows = [{"turn": t["turn"], **{f"compact_{k}": t["compact"].get(k) for k in
              ("wall_s", "peak_rss_mb", "fragments_before", "fragments_after")},

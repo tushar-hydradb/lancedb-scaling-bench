@@ -1,0 +1,95 @@
+[cadence] booting MinIO + bucket (lance-cadence) ...
+ Container lancedb-bench-minio-1 Running 
+ Container lancedb-bench-minio-1 Waiting 
+ Container lancedb-bench-minio-1 Healthy 
+ Container lancedb-bench-createbucket-1 Starting 
+ Container lancedb-bench-createbucket-1 Started 
+[cadence] venv python: python3.13 (3.13)
+[cadence] endpoint=http://127.0.0.1:9010 bucket=lance-cadence smoke=0
+[cadence] seeding ~500.0GB = 100000 rows in 600-row fragments (trpf=500) ...
+[2026-07-21T07:10:48Z WARN  lance::dataset::write::insert] No existing dataset at s3://lance-cadence/cadence/conn_cadence.lance, it will be created
+[cadence] seeded 51GB / 10200 rows (41s)
+[cadence] seeded 102GB / 20400 rows (81s)
+[cadence] seeded 153GB / 30600 rows (121s)
+[cadence] seeded 201GB / 40200 rows (160s)
+[cadence] seeded 252GB / 50400 rows (201s)
+[cadence] seeded 303GB / 60600 rows (241s)
+[cadence] seeded 351GB / 70200 rows (280s)
+[cadence] seeded 402GB / 80400 rows (323s)
+[cadence] seeded 453GB / 90600 rows (364s)
+[cadence] seeded 500GB / 100000 rows (402s)
+[cadence] seed done: 100000 rows, 167 fragments, 500GB, 402.2s
+[cadence] turn 1/50: read p50=113.68ms rss=1104.5MB | append 0.43s rss=682.4MB | compact 3.471s rss=4807.3MB frags 168->167 ver=170
+[cadence] turn 2/50: read p50=114.46ms rss=1105.3MB | append 0.459s rss=693.0MB | compact 0.0s rss=119.7MB frags 168->168 ver=171
+[cadence] turn 3/50: read p50=116.48ms rss=1120.3MB | append 0.528s rss=700.4MB | compact 1.222s rss=1763.5MB frags 169->168 ver=174
+[cadence] turn 4/50: read p50=111.47ms rss=1121.3MB | append 0.435s rss=690.5MB | compact 1.986s rss=3134.5MB frags 169->168 ver=177
+[cadence] turn 5/50: read p50=115.86ms rss=1114.3MB | append 0.427s rss=690.8MB | compact 2.792s rss=3697.2MB frags 169->168 ver=180
+[cadence] turn 6/50: read p50=117.55ms rss=1100.4MB | append 0.452s rss=720.4MB | compact 3.419s rss=4830.0MB frags 169->168 ver=183
+[cadence] turn 7/50: read p50=120.39ms rss=1189.4MB | append 0.418s rss=684.2MB | compact 0.0s rss=119.8MB frags 169->169 ver=184
+[cadence] turn 8/50: read p50=111.08ms rss=1044.4MB | append 0.442s rss=679.5MB | compact 1.21s rss=1714.9MB frags 170->169 ver=187
+[cadence] turn 9/50: read p50=115.67ms rss=1193.2MB | append 0.508s rss=677.6MB | compact 1.992s rss=2934.2MB frags 170->169 ver=190
+[cadence] turn 10/50: read p50=110.14ms rss=1065.1MB | append 0.44s rss=698.2MB | compact 2.754s rss=3613.4MB frags 170->169 ver=193
+[cadence] turn 11/50: read p50=109.52ms rss=1145.5MB | append 0.435s rss=700.4MB | compact 3.412s rss=4681.5MB frags 170->169 ver=196
+[cadence] turn 12/50: read p50=117.06ms rss=1164.7MB | append 0.44s rss=691.9MB | compact 0.0s rss=119.8MB frags 170->170 ver=197
+[cadence] turn 13/50: read p50=119.82ms rss=1214.8MB | append 0.506s rss=689.2MB | compact 1.247s rss=1716.4MB frags 171->170 ver=200
+[cadence] turn 14/50: read p50=117.87ms rss=1142.3MB | append 0.458s rss=709.4MB | compact 2.019s rss=3022.0MB frags 171->170 ver=203
+[cadence] turn 15/50: read p50=113.46ms rss=1104.4MB | append 0.427s rss=683.5MB | compact 2.737s rss=4144.6MB frags 171->170 ver=206
+[cadence] turn 16/50: read p50=112.43ms rss=1103.7MB | append 0.423s rss=686.4MB | compact 3.541s rss=4849.0MB frags 171->170 ver=209
+[cadence] turn 17/50: read p50=114.64ms rss=1202.6MB | append 0.433s rss=687.1MB | compact 0.0s rss=119.7MB frags 171->171 ver=210
+[cadence] turn 18/50: read p50=121.63ms rss=1215.8MB | append 0.474s rss=676.1MB | compact 1.208s rss=1688.4MB frags 172->171 ver=213
+[cadence] turn 19/50: read p50=119.02ms rss=1178.8MB | append 0.412s rss=674.4MB | compact 1.936s rss=2956.2MB frags 172->171 ver=216
+[cadence] turn 20/50: read p50=115.43ms rss=1131.0MB | append 0.436s rss=691.3MB | compact 2.78s rss=3618.5MB frags 172->171 ver=219
+[cadence] turn 21/50: read p50=115.12ms rss=1192.3MB | append 0.427s rss=687.5MB | compact 3.372s rss=4707.6MB frags 172->171 ver=222
+[cadence] turn 22/50: read p50=113.06ms rss=1173.2MB | append 0.418s rss=673.1MB | compact 0.0s rss=119.7MB frags 172->172 ver=223
+[cadence] turn 23/50: read p50=114.03ms rss=1140.2MB | append 0.491s rss=685.0MB | compact 1.267s rss=1677.0MB frags 173->172 ver=226
+[cadence] turn 24/50: read p50=114.3ms rss=1148.9MB | append 0.438s rss=697.2MB | compact 2.0s rss=3099.9MB frags 173->172 ver=229
+[cadence] turn 25/50: read p50=119.22ms rss=1096.7MB | append 0.43s rss=685.9MB | compact 2.812s rss=3808.7MB frags 173->172 ver=232
+[cadence] turn 26/50: read p50=112.33ms rss=1114.8MB | append 0.442s rss=694.1MB | compact 3.412s rss=4837.7MB frags 173->172 ver=235
+[cadence] turn 27/50: read p50=115.19ms rss=1154.2MB | append 0.417s rss=677.9MB | compact 0.0s rss=119.6MB frags 173->173 ver=236
+[cadence] turn 28/50: read p50=117.84ms rss=1080.1MB | append 0.494s rss=689.7MB | compact 1.262s rss=1686.5MB frags 174->173 ver=239
+[cadence] turn 29/50: read p50=119.6ms rss=1156.7MB | append 0.437s rss=681.3MB | compact 1.975s rss=2878.9MB frags 174->173 ver=242
+[cadence] turn 30/50: read p50=111.63ms rss=1029.6MB | append 0.422s rss=687.6MB | compact 2.943s rss=3568.5MB frags 174->173 ver=245
+[cadence] turn 31/50: read p50=114.54ms rss=1112.1MB | append 0.443s rss=692.9MB | compact 3.448s rss=4690.2MB frags 174->173 ver=248
+[cadence] turn 32/50: read p50=114.79ms rss=1063.0MB | append 0.45s rss=685.0MB | compact 0.0s rss=119.9MB frags 174->174 ver=249
+[cadence] turn 33/50: read p50=115.22ms rss=1150.3MB | append 0.517s rss=688.4MB | compact 1.245s rss=1709.0MB frags 175->174 ver=252
+[cadence] turn 34/50: read p50=115.9ms rss=1140.2MB | append 0.443s rss=692.3MB | compact 2.054s rss=3027.6MB frags 175->174 ver=255
+[cadence] turn 35/50: read p50=117.88ms rss=1116.5MB | append 0.428s rss=679.9MB | compact 3.06s rss=3616.8MB frags 175->174 ver=258
+[cadence] turn 36/50: read p50=115.93ms rss=1207.8MB | append 0.46s rss=694.2MB | compact 3.751s rss=4891.2MB frags 175->174 ver=261
+[cadence] turn 37/50: read p50=115.44ms rss=1140.4MB | append 0.556s rss=699.6MB | compact 0.0s rss=119.9MB frags 175->175 ver=262
+[cadence] turn 38/50: read p50=121.5ms rss=1081.8MB | append 0.435s rss=697.9MB | compact 1.268s rss=1735.0MB frags 176->175 ver=265
+[cadence] turn 39/50: read p50=123.8ms rss=1119.0MB | append 0.469s rss=709.9MB | compact 2.133s rss=3013.7MB frags 176->175 ver=268
+[cadence] turn 40/50: read p50=112.15ms rss=1123.8MB | append 0.442s rss=701.6MB | compact 2.784s rss=3732.6MB frags 176->175 ver=271
+[cadence] turn 41/50: read p50=116.97ms rss=1114.7MB | append 0.467s rss=694.8MB | compact 3.691s rss=4831.9MB frags 176->175 ver=274
+[cadence] turn 42/50: read p50=118.64ms rss=1096.8MB | append 0.429s rss=684.7MB | compact 0.0s rss=119.8MB frags 176->176 ver=275
+[cadence] turn 43/50: read p50=120.87ms rss=1089.7MB | append 0.443s rss=685.3MB | compact 1.258s rss=1675.1MB frags 177->176 ver=278
+[cadence] turn 44/50: read p50=115.84ms rss=1092.5MB | append 0.416s rss=672.6MB | compact 2.008s rss=2896.2MB frags 177->176 ver=281
+[cadence] turn 45/50: read p50=119.48ms rss=1079.6MB | append 0.431s rss=685.0MB | compact 2.72s rss=3600.3MB frags 177->176 ver=284
+[cadence] turn 46/50: read p50=117.4ms rss=1095.2MB | append 0.448s rss=714.8MB | compact 3.578s rss=4764.8MB frags 177->176 ver=287
+[cadence] turn 47/50: read p50=109.98ms rss=1077.1MB | append 0.456s rss=700.4MB | compact 0.0s rss=119.9MB frags 177->177 ver=288
+[cadence] turn 48/50: read p50=118.58ms rss=1103.1MB | append 0.458s rss=673.8MB | compact 1.27s rss=1707.9MB frags 178->177 ver=291
+[cadence] turn 49/50: read p50=123.11ms rss=1071.6MB | append 0.465s rss=701.6MB | compact 2.176s rss=3132.8MB frags 178->177 ver=294
+[cadence] turn 50/50: read p50=122.56ms rss=1074.3MB | append 0.425s rss=676.1MB | compact 2.847s rss=3601.0MB frags 178->177 ver=297
+[cadence] done -> /home/tusharhydra/code/lancedb-scaling-bench/results/compaction_cadence.json
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/ts_write_append.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/ts_write_merge.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/ts_read_full_scan.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/ts_read_filter_window.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/ts_read_ann_search.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/optimize_storage.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/optimize_fragments.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/scaling_read.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/scaling_write.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/ingest_throughput_vs_writers.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/ingest_timeseries.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/ingest_mbps_vs_tablesize.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/query_pXX_vs_size_windowed_full.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/query_pXX_vs_size_metadata_only.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/query_latency_vs_tables.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/query_compacted_vs_not.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/query_latency_vs_neighbor.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/cadence_rss_vs_turn.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/cadence_wall_vs_turn.png
+[plots] /home/tusharhydra/code/lancedb-scaling-bench/results/graphs/cadence_fragments_vs_turn.png
+[plots] done
+[report] wrote /home/tusharhydra/code/lancedb-scaling-bench/results/REPORT.md
+[cadence] done -> /home/tusharhydra/code/lancedb-scaling-bench/results/REPORT.md

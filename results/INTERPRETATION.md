@@ -129,13 +129,50 @@ then the ceiling on query improvement is the ~55% payload floor.
 
 ---
 
+## 5. Follow-up: does compacting *often* bound OOM risk + wall time? (local, 500 GB)
+
+Seeded one table to **500 GB** in fragments *above* `trpf` (so the body is treated as
+already-optimal and never rewritten), then ran **50 turns of read → append ~0.5 GB →
+`compact(trpf=500)`**, no version cleanup, each op isolated for honest per-op peak RSS.
+(`bench_compaction_cadence.py`, local MinIO, 32 GB box.)
+
+| metric | incremental (compact every append) | terminal 1 TB compaction |
+|---|---|---|
+| peak RSS mean / max | **2.7 / 4.8 GiB** | 23.0 GiB → **4.8× less** |
+| wall mean / max | **1.9 / 3.8 s** | 2081 s (35 min) → **~555× less** |
+| grows with table size? | **no** — bounded by ~2.5 GB output fragment | yes, whole-table |
+| any OOM | no | (near-miss at 73% RAM) |
+
+**Confirmed, with a precise mechanism.** Fragments went **167 → 177** over 50 turns —
+exactly the 167 untouched seed fragments + 10 sealed append-fragments (50 appends × 100
+rows ÷ 500 `trpf` = 10). So each compaction only ever consolidated the fresh delta; the
+500 GB body was never re-read. That's *why* peak RSS and wall stayed **flat while the
+table grew 500 → 525 GB and the un-cleaned version count climbed 170 → 297**. Per-turn
+work has no table-size term.
+
+**The refinement (don't overclaim):** the win is table-size *independence*, not a tiny
+absolute. Compaction RSS is bounded by **`trpf` (output-fragment size), not the table** —
+~2.5 GB output fragments here cost ~2.7 GB mean / 4.8 GB peak. That mean is under a 4 GiB
+pod but the *peak* just exceeds it. So there's a three-way knob:
+
+- `trpf` **up** → fewer fragments → **faster queries** (§2) but **higher compaction peak RSS**.
+- `trpf` **down** → lower peak RSS (pod-safe) but **more fragments → slower queries**.
+- **compacting often** is the free axis: it removes the *table-size* term from both RSS and
+  wall, turning a 23 GiB / 35-min terminal event into a bounded ~3 GiB / ~2-s per-append op.
+
+Read p50 drifted only 114 → 123 ms across the 50 turns despite 127 extra un-cleaned
+versions — version accumulation adds a little manifest-load latency but no cliff over this
+range. See `graphs/cadence_rss_vs_turn.png`, `cadence_wall_vs_turn.png`,
+`cadence_fragments_vs_turn.png`.
+
 ## What I'd change next
 
-- **Don't do one big terminal compaction.** At `trpf=500` it cost 35 min + 23.5 GB RAM
-  for a 15% query win. Either (a) compact incrementally during ingest to keep fragments
-  bounded and peak RSS low, or (b) only compact if you can afford the RAM to push
-  fragments down ~10× (which is the OOM regime on this box — would need a bigger-RAM
-  instance or the distributed approach).
+- **Compact incrementally, never one big terminal pass — now confirmed (§5).** The terminal
+  `trpf=500` pass cost 35 min + 23.5 GB RAM; compacting after every append holds the *same*
+  layout goal at ~2 s + ~3 GB per turn, flat regardless of table size, because it only ever
+  touches the fresh delta. Do this during ingest. Pick `trpf` to trade compaction peak-RSS
+  (bounded by output-fragment size) against query latency (fragment count) — and size the
+  pod for the *peak*, not the mean (~4.8 GB at `trpf=500`).
 - **Fragment count, not bytes, is the query-latency dial.** Track fragments/table as the
   health metric; target a fragment budget rather than a size budget.
 - **The payload-IO floor (~820 ms for a 100 MB window) caps what compaction can do.** If

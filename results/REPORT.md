@@ -1,6 +1,6 @@
 # LanceDB Scaling Characterization — Report
 
-_Resource cap(s): **2cpu-4g, ec2-uncapped** (disk uncapped). LanceDB pinned to prod version (lancedb 0.33.0). Backend: MinIO + DynamoDB-local for the capped local suite; real AWS S3 (uncapped EC2) for the large-scale (>1 TB) suite._
+_Resource cap(s): **2cpu-4g, ec2-uncapped, local-uncapped** (disk uncapped). LanceDB pinned to prod version (lancedb 0.33.0). Backend: MinIO + DynamoDB-local for the capped local suite; real AWS S3 (uncapped EC2) for the large-scale (>1 TB) suite._
 
 ### Q1 — How much can we write?
 
@@ -172,6 +172,42 @@ Query unit: windowed `cursor` keyset scan, W=20 rows, 300 samples/cell (5 warm-u
 > One compaction (1000 → 666 fragments, target_rows_per_fragment=500) took **2081.69 s**, 7603.55 CPU-s, peak RSS **23581.8 MB**. No `cleanup_old_versions` was run — superseded fragments remain (kept on purpose to remove that variable).
 
 
+### Compaction cadence — does compacting *often* bound OOM risk + wall time?
+
+One table seeded to **~500 GB** (167 fragments of 600 rows each — above `trpf=500`, so the seed body is never rewritten), then **50 turns** of read → append (~0.5 GB) → `compact_files(trpf=500)`. No `cleanup_old_versions` (versions accumulate). Each op runs in its own process so peak RSS is honestly per-op. Cap label: **local-uncapped** (host 32 GB RAM).
+
+**Result — per-compaction cost is bounded by `trpf` (output-fragment size), NOT table size — flat across all 50 turns:**
+
+| metric | incremental (compact every append) | terminal 1 TB compaction (prior run) |
+| --- | --- | --- |
+| peak RSS — mean / max | **2665.2 / 4891.2 MB** (4.8 GiB) | 23581.8 MB (23.0 GiB) → **4.8× less** |
+| wall — mean / max | **1.92 / 3.751 s** | 2081.69 s (35 min) → **~555× less** |
+| grows with table size? | **no** (bounded by ~2.5 GB output fragment) | yes (whole-table) |
+| any turn OOM-killed | **no** | — |
+
+> **Confirmed — compacting often bounds both OOM risk and wall time.** Each compaction only consolidates the fresh ~0.5 GB delta (never re-reading the 500 GB body), so peak RSS and wall stay **flat as the table grows 500→525 GB and versions pile to 297 (cleanup off)** — RSS is bounded by `trpf`, not the table, so it never approaches the terminal run's 23.0 GiB / 35 min.
+>
+> **Nuance:** the win is table-size *independence*, not a tiny absolute. At `trpf=500` (~2.5 GB output fragments) the mean is 2665.2 MB, which stays under the 4 GiB MOVEIT pod cap on average, but the **peak (4.8 GiB) slightly exceeds it**. To fit a smaller pod, lower `trpf` (smaller output fragments → lower peak RSS) — but that leaves more fragments, which the query-degradation finding showed costs read latency (~0.67 ms/fragment). So `trpf` trades **compaction peak-RSS against query latency**; compacting *often* is what removes the *table-size* term from both.
+
+**Per-turn detail** (compaction op):
+
+| turn | compact_wall_s | compact_peak_rss_mb | compact_fragments_before | compact_fragments_after | fragments | version | read_p50_ms |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 3.471 | 4807.3 | 168 | 167 | 167 | 170 | 113.68 |
+| 2 | 0.0 | 119.7 | 168 | 168 | 168 | 171 | 114.46 |
+| 3 | 1.222 | 1763.5 | 169 | 168 | 168 | 174 | 116.48 |
+| 4 | 1.986 | 3134.5 | 169 | 168 | 168 | 177 | 111.47 |
+| 5 | 2.792 | 3697.2 | 169 | 168 | 168 | 180 | 115.86 |
+| … |  |  |  |  |  |  |  |
+| 46 | 3.578 | 4764.8 | 177 | 176 | 176 | 287 | 117.4 |
+| 47 | 0.0 | 119.9 | 177 | 177 | 177 | 288 | 109.98 |
+| 48 | 1.27 | 1707.9 | 178 | 177 | 177 | 291 | 118.58 |
+| 49 | 2.176 | 3132.8 | 178 | 177 | 177 | 294 | 123.11 |
+| 50 | 2.847 | 3601.0 | 178 | 177 | 177 | 297 | 122.56 |
+
+_Read p50 went 113.68 → 122.56 ms from turn 1 → 50 while versions grew to 297 (cleanup off) — a check on whether accumulating versions slow the read path._
+
+
 ### Graphs
 
 _Rendered from real runs; see `results/graphs/`._
@@ -226,6 +262,14 @@ _Rendered from real runs; see `results/graphs/`._
 ![query_pXX_vs_size_metadata_only.png](graphs/query_pXX_vs_size_metadata_only.png)
 
 ![query_pXX_vs_size_windowed_full.png](graphs/query_pXX_vs_size_windowed_full.png)
+
+**Compaction cadence — incremental vs terminal (RSS + wall per turn)**
+
+![cadence_fragments_vs_turn.png](graphs/cadence_fragments_vs_turn.png)
+
+![cadence_rss_vs_turn.png](graphs/cadence_rss_vs_turn.png)
+
+![cadence_wall_vs_turn.png](graphs/cadence_wall_vs_turn.png)
 
 
 ### Scaling levers → how each moves the ceiling
