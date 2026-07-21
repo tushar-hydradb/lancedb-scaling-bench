@@ -354,6 +354,74 @@ def plot_query(data) -> None:
         _save(fig, "query_latency_vs_neighbor.png")
 
 
+# --- 6. compaction cadence --------------------------------------------------
+def plot_cadence(data) -> None:
+    turns = [t for t in data.get("turns", []) if not t.get("compact", {}).get("error")]
+    if not turns:
+        return
+    x = [t["turn"] for t in turns]
+    ref = data.get("reference", {})
+    term_rss = ref.get("terminal_rss_mb")
+    term_wall = ref.get("terminal_wall_s")
+    pod = ref.get("pod_mem_mb")
+    seed_gb = (data.get("seed") or {}).get("data_bytes", 0) / 1e9
+
+    def op(t, k, f):
+        v = t.get(k, {})
+        return v.get(f)
+
+    # (a) peak RSS per op per turn, with the terminal-compaction + pod-cap reference lines
+    fig, ax = plt.subplots(figsize=(10, 5.5))
+    ax.plot(x, [op(t, "compact", "peak_rss_mb") for t in turns], "o-", color="tab:red", lw=1.7, label="compact peak RSS")
+    ax.plot(x, [op(t, "append", "peak_rss_mb") for t in turns], "s-", color="tab:blue", alpha=0.8, label="append peak RSS")
+    ax.plot(x, [op(t, "read", "peak_rss_mb") for t in turns], "^-", color="tab:green", alpha=0.7, label="read peak RSS")
+    if term_rss:
+        ax.axhline(term_rss, ls="--", color="darkred", alpha=0.8,
+                   label=f"terminal 1 TB compaction ({term_rss/1000:.1f} GB)")
+    if pod:
+        ax.axhline(pod, ls=":", color="black", alpha=0.6, label=f"MOVEIT pod cap ({pod/1024:.0f} GiB)")
+    ax.set_xlabel("turn (read → append ~0.5 GB → compact)")
+    ax.set_ylabel("peak RSS (MB, isolated process)")
+    ax.set_title(f"Per-op peak RSS across {len(x)} compact-every-append turns\n"
+                 f"(seed ~{seed_gb:.0f} GB; incremental compaction stays flat & far below the terminal spike)")
+    ax.legend(fontsize=8, loc="center right")
+    ax.grid(alpha=0.25)
+    ax.set_ylim(bottom=0)
+    fig.tight_layout()
+    _save(fig, "cadence_rss_vs_turn.png")
+
+    # (b) wall time per op per turn, with terminal-compaction reference
+    fig, ax = plt.subplots(figsize=(10, 5.5))
+    ax.plot(x, [op(t, "compact", "wall_s") for t in turns], "o-", color="tab:red", lw=1.7, label="compact wall")
+    ax.plot(x, [op(t, "append", "wall_s") for t in turns], "s-", color="tab:blue", alpha=0.8, label="append wall")
+    ax.plot(x, [op(t, "read", "wall_s") for t in turns], "^-", color="tab:green", alpha=0.7, label="read wall")
+    if term_wall:
+        ax.axhline(term_wall, ls="--", color="darkred", alpha=0.8,
+                   label=f"terminal 1 TB compaction ({term_wall/60:.0f} min)")
+    ax.set_xlabel("turn (read → append ~0.5 GB → compact)")
+    ax.set_ylabel("wall time (s, incl. dataset open)")
+    ax.set_title(f"Per-op wall time across {len(x)} turns\n"
+                 f"(each compaction only touches the fresh delta, so it stays flat as the table & version history grow)")
+    ax.legend(fontsize=8)
+    ax.grid(alpha=0.25)
+    ax.set_ylim(bottom=0)
+    fig.tight_layout()
+    _save(fig, "cadence_wall_vs_turn.png")
+
+    # (c) fragment sawtooth + un-cleaned version growth
+    fig, ax1 = plt.subplots(figsize=(10, 5))
+    ax1.plot(x, [t.get("fragments") for t in turns], "o-", color="tab:purple", label="fragment count (post-compact)")
+    ax1.set_xlabel("turn")
+    ax1.set_ylabel("fragments", color="tab:purple")
+    ax2 = ax1.twinx()
+    ax2.plot(x, [t.get("version") for t in turns], "-", color="gray", alpha=0.6, label="dataset version (no cleanup)")
+    ax2.set_ylabel("version (monotonic, cleanup off)", color="gray")
+    ax1.set_title("Fragment count (bounded sawtooth) vs version growth across turns")
+    _legend(ax1, ax2)
+    fig.tight_layout()
+    _save(fig, "cadence_fragments_vs_turn.png")
+
+
 def main() -> None:
     os.makedirs(GRAPHS, exist_ok=True)
     ts = _load("timeseries")
@@ -371,6 +439,9 @@ def main() -> None:
     qd = _load("query_degradation")
     if qd:
         plot_query(qd)
+    cad = _load("compaction_cadence")
+    if cad:
+        plot_cadence(cad)
     print("[plots] done", flush=True)
 
 

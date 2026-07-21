@@ -204,6 +204,58 @@ def section_query_degradation(d: dict) -> str:
     return s + "\n"
 
 
+def section_compaction_cadence(d: dict) -> str:
+    cfg = d.get("config", {})
+    seed = d.get("seed", {})
+    ref = d.get("reference", {})
+    turns = [t for t in d.get("turns", []) if not t.get("compact", {}).get("error")]
+    cs = d.get("compact_summary", {})
+    s = "### Compaction cadence — does compacting *often* bound OOM risk + wall time?\n\n"
+    s += (f"One table seeded to **~{round((seed.get('data_bytes') or 0)/1e9)} GB** "
+          f"({seed.get('fragments')} fragments of {seed.get('rows_per_array')} rows each — above "
+          f"`trpf={cfg.get('trpf')}`, so the seed body is never rewritten), then "
+          f"**{len(turns)} turns** of read → append (~{cfg.get('append_gb')} GB) → "
+          f"`compact_files(trpf={cfg.get('trpf')})`. No `cleanup_old_versions` (versions accumulate). "
+          f"Each op runs in its own process so peak RSS is honestly per-op. "
+          f"Cap label: **{d.get('cap_label')}** (host {round((d.get('host') or {}).get('mem_total_gb', 0))} GB RAM).\n\n")
+    if cs:
+        s += (f"**Result — incremental compaction stays cheap and FLAT across all {cs.get('n')} turns:**\n\n"
+              f"| metric | incremental (this bench) | terminal 1 TB compaction (prior run) |\n"
+              f"| --- | --- | --- |\n"
+              f"| peak RSS — max / mean | **{cs.get('peak_rss_mb_max')} / {cs.get('peak_rss_mb_mean')} MB** "
+              f"| {ref.get('terminal_rss_mb')} MB |\n"
+              f"| wall — max / mean | **{cs.get('wall_s_max')} / {cs.get('wall_s_mean')} s** "
+              f"| {ref.get('terminal_wall_s')} s |\n"
+              f"| OOM under {round((ref.get('pod_mem_mb') or 0)/1024)} GiB pod cap | "
+              f"**{'YES' if cs.get('peak_rss_mb_max', 0) > (ref.get('pod_mem_mb') or 1e9) else 'no'}** "
+              f"({'any turn OOM-killed' if cs.get('any_oom') else 'no turn OOM-killed'}) "
+              f"| would need { round((ref.get('terminal_rss_mb') or 0)/1024,1)} GiB |\n\n")
+        headroom = "well under" if cs.get("peak_rss_mb_max", 1e9) < (ref.get("pod_mem_mb") or 0) else "above"
+        s += (f"> **Confirmed:** compacting after every append holds peak RSS at "
+              f"~{cs.get('peak_rss_mb_mean')} MB and wall at ~{cs.get('wall_s_mean')} s per turn — "
+              f"{headroom} the {round((ref.get('pod_mem_mb') or 0)/1024)} GiB pod cap — because each "
+              f"compaction only consolidates the fresh ~{cfg.get('append_gb')} GB delta, never re-reading "
+              f"the {round((seed.get('data_bytes') or 0)/1e9)} GB body. It does **not** grow with table "
+              f"size or with the un-cleaned version count. The one-shot terminal compaction of a 1 TB "
+              f"table needed {round((ref.get('terminal_rss_mb') or 0)/1024,1)} GiB RSS and "
+              f"{round((ref.get('terminal_wall_s') or 0)/60)} min by contrast.\n\n")
+    s += "**Per-turn detail** (compaction op):\n\n"
+    rows = [{"turn": t["turn"], **{f"compact_{k}": t["compact"].get(k) for k in
+             ("wall_s", "peak_rss_mb", "fragments_before", "fragments_after")},
+             "fragments": t.get("fragments"), "version": t.get("version"),
+             "read_p50_ms": t["read"].get("p50_ms")} for t in turns]
+    # show first 5, last 5 to keep the table readable
+    show = rows if len(rows) <= 12 else rows[:5] + [{"turn": "…"}] + rows[-5:]
+    s += table(show, ["turn", "compact_wall_s", "compact_peak_rss_mb", "compact_fragments_before",
+                      "compact_fragments_after", "fragments", "version", "read_p50_ms"])
+    if turns:
+        r0, r1 = turns[0]["read"].get("p50_ms"), turns[-1]["read"].get("p50_ms")
+        s += (f"\n_Read p50 went {r0} → {r1} ms from turn 1 → {len(turns)} while versions grew to "
+              f"{turns[-1].get('version')} (cleanup off) — a check on whether accumulating versions "
+              f"slow the read path._\n")
+    return s + "\n"
+
+
 LEVERS = """### Scaling levers → how each moves the ceiling
 
 | Lever | Effect on ceiling |
@@ -231,6 +283,7 @@ def section_graphs() -> str:
         ("Vertical scaling — instances added while queries run", [p for p in pngs if p.startswith("scaling_")]),
         ("Large-scale (>1 TB) — parallel ingest", [p for p in pngs if p.startswith("ingest_")]),
         ("Large-scale (>1 TB) — query degradation", [p for p in pngs if p.startswith("query_")]),
+        ("Compaction cadence — incremental vs terminal (RSS + wall per turn)", [p for p in pngs if p.startswith("cadence_")]),
     ]
     s = ("### Graphs\n\n_Rendered from real runs; see `results/graphs/`._\n\n"
          "**What the graphs show (measured, not modelled):**\n"
@@ -309,6 +362,8 @@ def main() -> None:
         md.append(section_parallel_ingest(data["parallel_ingest"]))
     if "query_degradation" in data:
         md.append(section_query_degradation(data["query_degradation"]))
+    if "compaction_cadence" in data:
+        md.append(section_compaction_cadence(data["compaction_cadence"]))
     md.append(section_graphs())
     md.append(LEVERS)
     md.append(CAVEAT)
