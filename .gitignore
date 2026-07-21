@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# raw high-frequency telemetry (multi-MB, reproducible, kept in S3)
+results/ingest_samples.jsonl

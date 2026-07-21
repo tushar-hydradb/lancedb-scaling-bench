@@ -1,0 +1,3 @@
+{"ts": 1784580756.683592, "n_writers": 1, "per_table_target_gb": 10.0, "wall_s": 36.71, "agg_mb_per_s": 298.9, "agg_rows_per_s": 59.9, "per_writer_mb_per_s": [311.7], "per_writer_cpu_s": [22.3], "per_writer_peak_rss_mb": [1221.7]}
+{"ts": 1784580799.4085534, "n_writers": 2, "per_table_target_gb": 10.0, "wall_s": 42.72, "agg_mb_per_s": 469.6, "agg_rows_per_s": 93.6, "per_writer_mb_per_s": [243.5, 242.3], "per_writer_cpu_s": [21.1, 21.3], "per_writer_peak_rss_mb": [1264.7, 1249.8]}
+{"ts": 1784580875.9033465, "n_writers": 4, "per_table_target_gb": 10.0, "wall_s": 76.49, "agg_mb_per_s": 572.5, "agg_rows_per_s": 115.0, "per_writer_mb_per_s": [146.9, 147.1, 145.8, 145.8], "per_writer_cpu_s": [24.0, 23.9, 24.4, 24.5], "per_writer_peak_rss_mb": [1224.3, 1238.7, 1258.1, 1245.4]}

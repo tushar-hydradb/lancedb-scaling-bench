@@ -1,0 +1,7 @@
+{"ts": 1784580755.678571, "type": "done", "table": "sweep_n1_w0", "rows": 2200, "data_bytes": 10972789089, "commits": 11, "cpu_s": 22.3, "peak_rss_mb": 1221.7, "wall_s": 35.2}
+{"ts": 1784580798.3633015, "type": "done", "table": "sweep_n2_w0", "rows": 2000, "data_bytes": 10042445411, "commits": 10, "cpu_s": 21.1, "peak_rss_mb": 1264.7, "wall_s": 41.25}
+{"ts": 1784580798.4042513, "type": "done", "table": "sweep_n2_w1", "rows": 2000, "data_bytes": 10017938616, "commits": 10, "cpu_s": 21.3, "peak_rss_mb": 1249.8, "wall_s": 41.34}
+{"ts": 1784580874.2169342, "type": "done", "table": "sweep_n4_w3", "rows": 2200, "data_bytes": 10925087243, "commits": 11, "cpu_s": 24.0, "peak_rss_mb": 1224.3, "wall_s": 74.37}
+{"ts": 1784580874.532077, "type": "done", "table": "sweep_n4_w1", "rows": 2200, "data_bytes": 10983165677, "commits": 11, "cpu_s": 23.9, "peak_rss_mb": 1238.7, "wall_s": 74.69}
+{"ts": 1784580874.86268, "type": "done", "table": "sweep_n4_w0", "rows": 2200, "data_bytes": 10937760642, "commits": 11, "cpu_s": 24.4, "peak_rss_mb": 1258.1, "wall_s": 75.02}
+{"ts": 1784580874.8987336, "type": "done", "table": "sweep_n4_w2", "rows": 2200, "data_bytes": 10943693679, "commits": 11, "cpu_s": 24.5, "peak_rss_mb": 1245.4, "wall_s": 75.06}

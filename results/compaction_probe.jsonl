@@ -1,0 +1,1 @@
+{"ts": 1784603195.0417378, "oom": false, "error": null, "fragments_before": 1000, "fragments_after": 666, "version_after": 1334, "target_rows_per_fragment": 500, "wall_s": 2081.69, "cpu_s": 7603.55, "peak_rss_mb": 23581.8, "elapsed_s": 2084.6}

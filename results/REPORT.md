@@ -1,6 +1,6 @@
 # LanceDB Scaling Characterization — Report
 
-_Resource cap(s): **2cpu-4g** (disk uncapped). LanceDB pinned to prod version (lancedb 0.33.0). Backend: MinIO (S3) + DynamoDB-local._
+_Resource cap(s): **2cpu-4g, ec2-uncapped** (disk uncapped). LanceDB pinned to prod version (lancedb 0.33.0). Backend: MinIO + DynamoDB-local for the capped local suite; real AWS S3 (uncapped EC2) for the large-scale (>1 TB) suite._
 
 ### Q1 — How much can we write?
 
@@ -86,6 +86,92 @@ Both use LanceDB's default MVCC/optimistic-concurrency commit; conflicts are ret
 CPU/RSS scale with rows+fragments rewritten; S3 cost is the rewrite amplification (old+new files coexist until `cleanup_old_versions`). Public data point for scale: a 60M-row table with a 768-dim vector exceeded **250GB RAM** during optimize — plan compaction cadence and memory accordingly ([lancedb#3201](https://github.com/lancedb/lancedb/issues/3201)).
 
 
+### Large-scale (>1 TB) — parallel ingest
+
+**4 writers × ~1000.0 GB** connector tables, gaussian `data` (mean 5.0 MB / std 1.0 MB), 200 rows/array (~1 GB, ~72σ under the 2 GB int32 offset cap), schema `string`, seed 7.
+
+**Writer-scaling sweep — aggregate throughput vs concurrent writers:**
+
+| n_writers | per_table_target_gb | agg_mb_per_s | agg_rows_per_s | scaling_efficiency | wall_s |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 10.0 | 298.9 | 59.9 | 1.0 | 36.71 |
+| 2 | 10.0 | 469.6 | 93.6 | 0.786 | 42.72 |
+| 4 | 10.0 | 572.5 | 115.0 | 0.479 | 76.49 |
+
+**Primary build:** 4 writers → aggregate **279.3 MB/s** / 55.8 rows/s, 4001.1 GB in 238.7 min. Per-writer MB/s: [70.3, 70.1, 70.0, 69.9].
+
+**Ingest vs size — `conn_0` checkpoints** (does write slow as the table grows?):
+
+| target_gb | rows | fragments | version | interval_mb_per_s | interval_rows_per_s | cum_wall_s | rss_mb |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 100.0 | 20200 | 101 | 101 | 147.0 | 29.4 | 686.38 | 1231.7 |
+| 250.0 | 50200 | 251 | 251 | 93.6 | 18.7 | 2287.84 | 1232.3 |
+| 500.0 | 100200 | 501 | 501 | 62.7 | 12.5 | 6275.33 | 1251.4 |
+| 1000.0 | 200000 | 1000 | 1000 | 62.9 | 12.6 | 14218.34 | 1241.2 |
+
+The **version** column is the dataset version at each size — the query bench opens exactly these to read a table *as it was* at 100/250/500/1000 GB (versions are intact; cleanup is off).
+
+
+### Large-scale (>1 TB) — query degradation
+
+Query unit: windowed `cursor` keyset scan, W=20 rows, 300 samples/cell (5 warm-up discarded), random offset per query. Default probe size 500.0 GB.
+
+**Latency vs table size** (windowed_full — payload IO included):
+
+| table_gb | fragments | p50_ms | p95_ms | p99_ms | qps | mb_per_s |
+| --- | --- | --- | --- | --- | --- | --- |
+| 100.0 | 101 | 816.97 | 1117.05 | 1281.79 | 1.21 | 120.6 |
+| 250.0 | 251 | 995.06 | 1363.63 | 1489.28 | 0.99 | 98.7 |
+| 500.0 | 501 | 1206.53 | 1577.91 | 1781.73 | 0.82 | 82.1 |
+| 1000.0 | 1000 | 1517.89 | 2080.73 | 2405.59 | 0.64 | 64.2 |
+
+**Latency vs table size** (metadata_only — isolates fragment/plan cost):
+
+| table_gb | fragments | p50_ms | p95_ms | p99_ms | qps |
+| --- | --- | --- | --- | --- | --- |
+| 100.0 | 101 | 79.77 | 191.69 | 266.8 | 10.75 |
+| 250.0 | 251 | 179.61 | 364.56 | 584.93 | 4.75 |
+| 500.0 | 501 | 307.26 | 535.62 | 663.98 | 2.94 |
+| 1000.0 | 1000 | 681.48 | 1078.43 | 1234.5 | 1.4 |
+
+**Same table vs different tables:**
+
+| layout | table_gb | n_tables | p50_ms | p95_ms | p99_ms | qps |
+| --- | --- | --- | --- | --- | --- | --- |
+| same_table | 500.0 | 1 | 1158.86 | 1601.89 | 1836.42 | 0.84 |
+| different_tables | 500.0 | 4 | 1226.1 | 1642.42 | 1905.33 | 0.81 |
+
+**Busy neighbors** — conn_0 latency while K workers hammer the same/other tables:
+
+| load | k | p50_ms | p95_ms | p99_ms | neighbor_qps | peak_cpu_cores |
+| --- | --- | --- | --- | --- | --- | --- |
+| idle | 0 | 1092.1 | 1511.69 | 1821.63 | 0 | None |
+| other | 1 | 1182.98 | 1659.21 | 1819.09 | 0.7 | 3.51 |
+| other | 2 | 1187.12 | 1595.38 | 1792.31 | 1.3 | 4.49 |
+| other | 4 | 1244.22 | 1721.3 | 1894.7 | 2.4 | 6.5 |
+| same | 1 | 1116.73 | 1528.99 | 1695.81 | 0.7 | 3.93 |
+| same | 2 | 1101.66 | 1477.75 | 1807.3 | 1.4 | 4.79 |
+| same | 4 | 1196.09 | 1646.18 | 1927.43 | 2.6 | 6.79 |
+
+**Table-count sweep** — single-table query latency vs catalog-listing latency:
+
+| n_tables | p50_ms | p95_ms | p99_ms | list_p50_ms | list_p95_ms |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 83.32 | 115.01 | 146.59 | 15.69 | 18.37 |
+| 2 | 85.21 | 117.05 | 132.33 | 15.46 | 19.99 |
+| 4 | 84.25 | 120.18 | 271.49 | 24.09 | 39.19 |
+| 8 | 82.79 | 106.91 | 125.39 | 14.56 | 16.86 |
+
+**One compaction — before vs after (identical table size):**
+
+| state | table_gb | fragments | p50_ms | p95_ms | p99_ms | qps |
+| --- | --- | --- | --- | --- | --- | --- |
+| uncompacted | 1000.0 | 1000 | 1443.76 | 2020.85 | 2305.29 | 0.67 |
+| compacted | 1000.0 | 666 | 1221.92 | 1711.98 | 1993.6 | 0.79 |
+
+> One compaction (1000 → 666 fragments, target_rows_per_fragment=500) took **2081.69 s**, 7603.55 CPU-s, peak RSS **23581.8 MB**. No `cleanup_old_versions` was run — superseded fragments remain (kept on purpose to remove that variable).
+
+
 ### Graphs
 
 _Rendered from real runs; see `results/graphs/`._
@@ -94,6 +180,8 @@ _Rendered from real runs; see `results/graphs/`._
 - **Vertical-scaling ceiling** (`scaling_read`): under the 2-core cap, read throughput climbs 1→2 instances (~1→2 cores) then **plateaus and degrades** as instances 3–6 are added live — CPU is pinned at the cap and extra instances only add context-switch contention. Writes (`scaling_write`) never saturate CPU (~0.3 cores): they're commit/IO-bound, so they scale on a different axis (object-store round-trips), not cores.
 - **optimize() cadence vs storage** (`optimize_storage`): never-compacting grew to **~1071 MB / 200 fragments** for 500k rows, ~**2× the ~535 MB / 21 fragments** of compact-every-20 — many small append-fragments store the same rows far less efficiently. ▲ marks the transient ~2× spike during compaction (old+new coexist) reclaimed by `cleanup_old_versions`.
 - **CPU/mem vs query count** (`ts_*`): scans hold <1 core with an RSS sawtooth per materialisation; merge_insert is the CPU-heaviest write pattern.
+- **Read-ops dips at each instance-add were a plot artifact, now fixed.** Throughput is `Δagg_ops/Δt`; spawning an instance briefly stretches the one sampler interval that straddles it, so a constant-rate counter dips then rebounds (the identical dip appeared in the write profile — proof it's harness-level, not LanceDB). `_throughput` now averages over a ~1 s trailing window, removing the aliasing while keeping the true ramp/plateau.
+- **Large-scale (`ingest_*`, `query_*`):** parallel ingest to ~1 TB/table on real S3, query latency vs table size, fragment count (one compaction), table count, and busy neighbors — see the two large-scale sections above for the numbers.
 
 **Time-series — CPU/mem vs query count (per pattern)**
 
@@ -119,6 +207,26 @@ _Rendered from real runs; see `results/graphs/`._
 
 ![scaling_write.png](graphs/scaling_write.png)
 
+**Large-scale (>1 TB) — parallel ingest**
+
+![ingest_mbps_vs_tablesize.png](graphs/ingest_mbps_vs_tablesize.png)
+
+![ingest_throughput_vs_writers.png](graphs/ingest_throughput_vs_writers.png)
+
+![ingest_timeseries.png](graphs/ingest_timeseries.png)
+
+**Large-scale (>1 TB) — query degradation**
+
+![query_compacted_vs_not.png](graphs/query_compacted_vs_not.png)
+
+![query_latency_vs_neighbor.png](graphs/query_latency_vs_neighbor.png)
+
+![query_latency_vs_tables.png](graphs/query_latency_vs_tables.png)
+
+![query_pXX_vs_size_metadata_only.png](graphs/query_pXX_vs_size_metadata_only.png)
+
+![query_pXX_vs_size_windowed_full.png](graphs/query_pXX_vs_size_windowed_full.png)
+
 
 ### Scaling levers → how each moves the ceiling
 
@@ -143,6 +251,14 @@ _Rendered from real runs; see `results/graphs/`._
   upper bound; on-disk bytes are far smaller. rows/s and latency are unaffected.
 - **On-disk bytes include superseded versions** until `cleanup_old_versions` runs (visible as
   rewrite_amplification in Q7 and the >logical on-disk size in Q6).
-- All numbers are under the capped container (see cap label); they are a *floor* on real hardware,
-  not a hardware benchmark. Vector index build (IVF_PQ) took ~147s on 200k×768 under 2 vCPU —
+- All small-scale numbers are under the capped container (see cap label); they are a *floor* on real
+  hardware, not a hardware benchmark. Vector index build (IVF_PQ) took ~147s on 200k×768 under 2 vCPU —
   index construction is the CPU-heaviest single op measured.
+- **The large-scale (>1 TB) suite runs UNCAPPED on the full EC2 box against real AWS S3.** Those
+  latencies/throughputs reflect that box, **not** the 2 vCPU / 4 GiB MOVEIT pod — they are a *ceiling*,
+  the opposite end from the capped floor above. Real S3 (native atomic conditional-PUT, per-connector
+  single writer) also means no DynamoDB commit store is used there.
+- **Version count grows unbounded in the large-scale suite** because `cleanup_old_versions` is
+  intentionally never called (one fewer variable). The per-checkpoint `version` values are recorded so
+  any manifest-load slowdown is attributable, not hidden. Delete the tables from S3 after capturing
+  `results/` to stop storage billing.

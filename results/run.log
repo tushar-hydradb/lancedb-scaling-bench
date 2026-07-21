@@ -1,0 +1,158 @@
+[run_ec2] venv python: python3.13 (3.13)
+[run_ec2] bucket=lancedb-temp-tprf500-bucket region=us-east-1 smoke=0 cores=8
+[parallel_ingest] host: {'nproc': 8, 'cpu_limit_cores': 8.0, 'real_s3': True, 'bucket': 'lancedb-temp-tprf500-bucket', 'region': 'us-east-1', 'lance_version': '0.33.0', 'lancedb_version': '0.33.0', 'mem_total_gb': 32.4, 'instance_type': 't4g.2xlarge', 'instance_id': 'i-03629dc938f808b51', 'az': 'us-east-1c'}
+[parallel_ingest] config: {'n_writers': 4, 'per_table_target_gb': 1000.0, 'checkpoints_gb': [100.0, 250.0, 500.0, 1000.0], 'rows_per_array': 200, 'mean_bytes': 5000000.0, 'std_bytes': 1000000.0, 'min_bytes': 64000, 'seed': 7, 'use_large': False, 'sweep_ns': [1, 2, 4], 'sweep_target_gb': 10.0, 'smoke': False}
+[2026-07-20T20:52:00Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/bigscale/sweep_n1_w0.lance, it will be created
+[parallel_ingest] sweep N=1: agg 298.9 MB/s (36.71s)
+[2026-07-20T20:52:37Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/bigscale/sweep_n2_w1.lance, it will be created
+[2026-07-20T20:52:37Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/bigscale/sweep_n2_w0.lance, it will be created
+[parallel_ingest] sweep N=2: agg 469.6 MB/s (42.72s)
+[2026-07-20T20:53:19Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/bigscale/sweep_n4_w1.lance, it will be created
+[2026-07-20T20:53:19Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/bigscale/sweep_n4_w3.lance, it will be created
+[2026-07-20T20:53:19Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/bigscale/sweep_n4_w2.lance, it will be created
+[2026-07-20T20:53:20Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/bigscale/sweep_n4_w0.lance, it will be created
+[parallel_ingest] sweep N=4: agg 572.5 MB/s (76.49s)
+[2026-07-20T20:54:36Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/bigscale/conn_3.lance, it will be created
+[2026-07-20T20:54:36Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/bigscale/conn_0.lance, it will be created
+[2026-07-20T20:54:36Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/bigscale/conn_1.lance, it will be created
+[2026-07-20T20:54:36Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/bigscale/conn_2.lance, it will be created
+[parallel_ingest] conn_1 @ 100.0GB: v100, 100 frags, 149.0 MB/s
+[parallel_ingest] conn_3 @ 100.0GB: v101, 101 frags, 148.7 MB/s
+[parallel_ingest] conn_2 @ 100.0GB: v100, 100 frags, 147.3 MB/s
+[parallel_ingest] conn_0 @ 100.0GB: v101, 101 frags, 147.0 MB/s
+[parallel_ingest] conn_1 @ 250.0GB: v250, 250 frags, 93.3 MB/s
+[parallel_ingest] conn_0 @ 250.0GB: v251, 251 frags, 93.6 MB/s
+[parallel_ingest] conn_3 @ 250.0GB: v251, 251 frags, 93.1 MB/s
+[parallel_ingest] conn_2 @ 250.0GB: v250, 250 frags, 89.5 MB/s
+[parallel_ingest] conn_3 @ 500.0GB: v501, 501 frags, 63.1 MB/s
+[parallel_ingest] conn_0 @ 500.0GB: v501, 501 frags, 62.7 MB/s
+[parallel_ingest] conn_1 @ 500.0GB: v500, 500 frags, 61.9 MB/s
+[parallel_ingest] conn_2 @ 500.0GB: v500, 500 frags, 61.6 MB/s
+[parallel_ingest] conn_0 @ 1000.0GB: v1000, 1000 frags, 62.9 MB/s
+[parallel_ingest] conn_3 @ 1000.0GB: v1000, 1000 frags, 62.3 MB/s
+[parallel_ingest] conn_1 @ 1000.0GB: v1000, 1000 frags, 62.8 MB/s
+[parallel_ingest] conn_2 @ 1000.0GB: v1000, 1000 frags, 63.3 MB/s
+[parallel_ingest] primary build done: 4 writers, 4001.1 GB in 238.7 min
+[query_degradation] host: {'nproc': 8, 'cpu_limit_cores': 8.0, 'real_s3': True, 'bucket': 'lancedb-temp-tprf500-bucket', 'region': 'us-east-1', 'lance_version': '0.33.0', 'lancedb_version': '0.33.0', 'mem_total_gb': 32.4, 'instance_type': 't4g.2xlarge', 'instance_id': 'i-03629dc938f808b51', 'az': 'us-east-1c'}
+[query_degradation] config: {'window': 20, 'samples': 300, 'warmup': 5, 'seed': 11, 'default_gb': 500.0, 'neighbor_ks': [1, 2, 4], 'table_count_ns': [1, 2, 4, 8], 'compact_trpf': 500, 'smoke': False}
+[query_degradation] size 100.0GB windowed_full: p50=816.97 p95=1117.05 p99=1281.79ms
+[query_degradation] size 100.0GB metadata_only: p50=79.77 p95=191.69 p99=266.8ms
+[query_degradation] size 250.0GB windowed_full: p50=995.06 p95=1363.63 p99=1489.28ms
+[query_degradation] size 250.0GB metadata_only: p50=179.61 p95=364.56 p99=584.93ms
+[query_degradation] size 500.0GB windowed_full: p50=1206.53 p95=1577.91 p99=1781.73ms
+[query_degradation] size 500.0GB metadata_only: p50=307.26 p95=535.62 p99=663.98ms
+[query_degradation] size 1000.0GB windowed_full: p50=1517.89 p95=2080.73 p99=2405.59ms
+[query_degradation] size 1000.0GB metadata_only: p50=681.48 p95=1078.43 p99=1234.5ms
+[query_degradation] axis 'size' done — 8 cells persisted
+[query_degradation] axis 'layout' done — 10 cells persisted
+[query_degradation] neighbor same K=1: p50=1116.73 p95=1528.99ms (neighbor 0.7 qps, peak 3.9 cores)
+[query_degradation] neighbor same K=2: p50=1101.66 p95=1477.75ms (neighbor 1.4 qps, peak 4.8 cores)
+[query_degradation] neighbor same K=4: p50=1196.09 p95=1646.18ms (neighbor 2.6 qps, peak 6.8 cores)
+[query_degradation] neighbor other K=1: p50=1182.98 p95=1659.21ms (neighbor 0.7 qps, peak 3.5 cores)
+[query_degradation] neighbor other K=2: p50=1187.12 p95=1595.38ms (neighbor 1.3 qps, peak 4.5 cores)
+[query_degradation] neighbor other K=4: p50=1244.22 p95=1721.3ms (neighbor 2.4 qps, peak 6.5 cores)
+[query_degradation] axis 'neighbor' done — 17 cells persisted
+[2026-07-21T02:18:54Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/tablecount/t0.lance, it will be created
+[query_degradation] table_count N=1: query p50=83.32ms, list p50=15.69ms
+[2026-07-21T02:19:22Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/tablecount/t1.lance, it will be created
+[query_degradation] table_count N=2: query p50=85.21ms, list p50=15.46ms
+[2026-07-21T02:19:50Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/tablecount/t2.lance, it will be created
+[2026-07-21T02:19:50Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/tablecount/t3.lance, it will be created
+[query_degradation] table_count N=4: query p50=84.25ms, list p50=24.09ms
+[2026-07-21T02:20:20Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/tablecount/t4.lance, it will be created
+[2026-07-21T02:20:20Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/tablecount/t5.lance, it will be created
+[2026-07-21T02:20:21Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/tablecount/t6.lance, it will be created
+[2026-07-21T02:20:21Z WARN  lance::dataset::write::insert] No existing dataset at s3://lancedb-temp-tprf500-bucket/tablecount/t7.lance, it will be created
+[query_degradation] table_count N=8: query p50=82.79ms, list p50=14.56ms
+[query_degradation] axis 'table_count' done — 21 cells persisted
+[query_degradation] compacting conn_0 (1000 frags, ~1000.0GB, trpf=500)...
+[query_degradation] compaction running… 30s, rss=16924MB
+[query_degradation] compaction running… 60s, rss=12234MB
+[query_degradation] compaction running… 90s, rss=15178MB
+[query_degradation] compaction running… 120s, rss=17347MB
+[query_degradation] compaction running… 150s, rss=11996MB
+[query_degradation] compaction running… 180s, rss=18779MB
+[query_degradation] compaction running… 210s, rss=14667MB
+[query_degradation] compaction running… 240s, rss=17105MB
+[query_degradation] compaction running… 270s, rss=16210MB
+[query_degradation] compaction running… 300s, rss=17697MB
+[query_degradation] compaction running… 330s, rss=15551MB
+[query_degradation] compaction running… 360s, rss=18600MB
+[query_degradation] compaction running… 390s, rss=19445MB
+[query_degradation] compaction running… 420s, rss=18451MB
+[query_degradation] compaction running… 450s, rss=13573MB
+[query_degradation] compaction running… 480s, rss=17431MB
+[query_degradation] compaction running… 510s, rss=16557MB
+[query_degradation] compaction running… 540s, rss=17765MB
+[query_degradation] compaction running… 570s, rss=17724MB
+[query_degradation] compaction running… 600s, rss=11987MB
+[query_degradation] compaction running… 630s, rss=15960MB
+[query_degradation] compaction running… 660s, rss=16919MB
+[query_degradation] compaction running… 690s, rss=15077MB
+[query_degradation] compaction running… 720s, rss=14870MB
+[query_degradation] compaction running… 750s, rss=18202MB
+[query_degradation] compaction running… 780s, rss=15413MB
+[query_degradation] compaction running… 810s, rss=17692MB
+[query_degradation] compaction running… 840s, rss=17912MB
+[query_degradation] compaction running… 870s, rss=20317MB
+[query_degradation] compaction running… 900s, rss=15441MB
+[query_degradation] compaction running… 930s, rss=19550MB
+[query_degradation] compaction running… 960s, rss=17538MB
+[query_degradation] compaction running… 990s, rss=19575MB
+[query_degradation] compaction running… 1020s, rss=15765MB
+[query_degradation] compaction running… 1050s, rss=18569MB
+[query_degradation] compaction running… 1080s, rss=18809MB
+[query_degradation] compaction running… 1110s, rss=21616MB
+[query_degradation] compaction running… 1140s, rss=14519MB
+[query_degradation] compaction running… 1170s, rss=16586MB
+[query_degradation] compaction running… 1200s, rss=20710MB
+[query_degradation] compaction running… 1230s, rss=16596MB
+[query_degradation] compaction running… 1260s, rss=16816MB
+[query_degradation] compaction running… 1290s, rss=17807MB
+[query_degradation] compaction running… 1320s, rss=19696MB
+[query_degradation] compaction running… 1350s, rss=18035MB
+[query_degradation] compaction running… 1380s, rss=19439MB
+[query_degradation] compaction running… 1410s, rss=15747MB
+[query_degradation] compaction running… 1440s, rss=17876MB
+[query_degradation] compaction running… 1470s, rss=16052MB
+[query_degradation] compaction running… 1500s, rss=22150MB
+[query_degradation] compaction running… 1530s, rss=18082MB
+[query_degradation] compaction running… 1560s, rss=12787MB
+[query_degradation] compaction running… 1590s, rss=17642MB
+[query_degradation] compaction running… 1620s, rss=16725MB
+[query_degradation] compaction running… 1650s, rss=16079MB
+[query_degradation] compaction running… 1680s, rss=17203MB
+[query_degradation] compaction running… 1710s, rss=20885MB
+[query_degradation] compaction running… 1740s, rss=20258MB
+[query_degradation] compaction running… 1770s, rss=15247MB
+[query_degradation] compaction running… 1800s, rss=21162MB
+[query_degradation] compaction running… 1830s, rss=18681MB
+[query_degradation] compaction running… 1860s, rss=21104MB
+[query_degradation] compaction running… 1890s, rss=16192MB
+[query_degradation] compaction running… 1920s, rss=13483MB
+[query_degradation] compaction running… 1950s, rss=14316MB
+[query_degradation] compaction running… 1980s, rss=14322MB
+[query_degradation] compaction running… 2010s, rss=13367MB
+[query_degradation] compaction running… 2040s, rss=13403MB
+[query_degradation] compaction running… 2070s, rss=18465MB
+[query_degradation] compaction done: 1000→666 frags, wall=2081.69s cpu=7603.55s peak_rss=23581.8MB elapsed=2084.6s
+[query_degradation] done — 25 cells
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/ts_write_append.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/ts_write_merge.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/ts_read_full_scan.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/ts_read_filter_window.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/ts_read_ann_search.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/optimize_storage.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/optimize_fragments.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/scaling_read.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/scaling_write.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/ingest_throughput_vs_writers.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/ingest_timeseries.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/ingest_mbps_vs_tablesize.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/query_pXX_vs_size_windowed_full.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/query_pXX_vs_size_metadata_only.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/query_latency_vs_tables.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/query_compacted_vs_not.png
+[plots] /home/teammate/lancedb-scaling-bench/results/graphs/query_latency_vs_neighbor.png
+[plots] done
+[report] wrote /home/teammate/lancedb-scaling-bench/results/REPORT.md
