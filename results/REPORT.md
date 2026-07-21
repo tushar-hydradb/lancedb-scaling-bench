@@ -1,6 +1,6 @@
 # LanceDB Scaling Characterization — Report
 
-_Resource cap(s): **2cpu-4g, ec2-uncapped, local-uncapped** (disk uncapped). LanceDB pinned to prod version (lancedb 0.33.0). Backend: MinIO + DynamoDB-local for the capped local suite; real AWS S3 (uncapped EC2) for the large-scale (>1 TB) suite._
+_Resource cap(s): **2cpu-4g, ec2-s3-uncapped, ec2-uncapped** (disk uncapped). LanceDB pinned to prod version (lancedb 0.33.0). Backend: MinIO + DynamoDB-local for the capped local suite; real AWS S3 (uncapped EC2) for the large-scale (>1 TB) suite._
 
 ### Q1 — How much can we write?
 
@@ -174,38 +174,39 @@ Query unit: windowed `cursor` keyset scan, W=20 rows, 300 samples/cell (5 warm-u
 
 ### Compaction cadence — does compacting *often* bound OOM risk + wall time?
 
-One table seeded to **~500 GB** (167 fragments of 600 rows each — above `trpf=500`, so the seed body is never rewritten), then **50 turns** of read → append (~0.5 GB) → `compact_files(trpf=500)`. No `cleanup_old_versions` (versions accumulate). Each op runs in its own process so peak RSS is honestly per-op. Cap label: **local-uncapped** (host 32 GB RAM).
+One table seeded to **~500 GB** as 500 SMALL fragments of 200 rows each (**under** `trpf=500` — an uncompacted drain backlog, NOT pre-compacted), then **50 turns** of read → append (~0.5 GB) → `compact_files(trpf=500)`. No `cleanup_old_versions` (versions accumulate). Each op runs in its own process so peak RSS is honestly per-op. Cap label: **ec2-s3-uncapped** (host 32 GB RAM). The contrast is **within-run** — turn 1 (full backlog) vs the steady state — same box, same ~500 GB.
 
-**Result — per-compaction cost is bounded by `trpf` (output-fragment size), NOT table size — flat across all 50 turns:**
+**Result — the backlog is paid ONCE (turn 1); every compaction after drops sharply and stays flat:**
 
-| metric | incremental (compact every append) | terminal 1 TB compaction (prior run) |
-| --- | --- | --- |
-| peak RSS — mean / max | **2665.2 / 4891.2 MB** (4.8 GiB) | 23581.8 MB (23.0 GiB) → **4.8× less** |
-| wall — mean / max | **1.92 / 3.751 s** | 2081.69 s (35 min) → **~555× less** |
-| grows with table size? | **no** (bounded by ~2.5 GB output fragment) | yes (whole-table) |
-| any turn OOM-killed | **no** | — |
+| compaction | peak RSS | wall | fragments |
+| --- | --- | --- | --- |
+| **turn 1 — full 500 GB backlog** | **20741.4 MB** (20.3 GiB) | **1053.879 s** | 501 → 333 |
+| turns 2–50 — steady state (mean) | 2568.5 MB (2.5 GiB) | 6.49 s | +1 delta/turn |
+| **drop (turn 1 → steady mean)** | **8.1× less RSS** | **162.4× less wall** | — |
 
-> **Confirmed — compacting often bounds both OOM risk and wall time.** Each compaction only consolidates the fresh ~0.5 GB delta (never re-reading the 500 GB body), so peak RSS and wall stay **flat as the table grows 500→525 GB and versions pile to 297 (cleanup off)** — RSS is bounded by `trpf`, not the table, so it never approaches the terminal run's 23.0 GiB / 35 min.
+> **Confirmed — exactly the expected shape.** Turn 1 compacts the whole uncompacted 500 GB backlog (501 small fragments → 333), costing **20741.4 MB / 1053.879 s**. From turn 2 on, the body is at target and is skipped, so each compaction only consolidates the fresh ~0.5 GB delta — **2568.5 MB / 6.49 s mean, and FLAT** as the table grows and versions pile to 798 (cleanup off). So the answer is yes: **catch up once, then compacting often keeps every subsequent compaction cheap.**
 >
-> **Nuance:** the win is table-size *independence*, not a tiny absolute. At `trpf=500` (~2.5 GB output fragments) the mean is 2665.2 MB, which stays under the 4 GiB MOVEIT pod cap on average, but the **peak (4.8 GiB) slightly exceeds it**. To fit a smaller pod, lower `trpf` (smaller output fragments → lower peak RSS) — but that leaves more fragments, which the query-degradation finding showed costs read latency (~0.67 ms/fragment). So `trpf` trades **compaction peak-RSS against query latency**; compacting *often* is what removes the *table-size* term from both.
+> Steady-state RSS is bounded by `trpf` (output-fragment size ~2.5 GB), not the table — peak 4925.3 MB. That means `trpf` is a knob: higher → fewer fragments → faster queries (§ query degradation, ~0.67 ms/fragment) but a higher steady-state compaction peak; lower → the reverse. Compacting often is what removes the *table-size* term from both RSS and wall.
+>
+> _Not compared to the 1 TB EC2 terminal run (23.6 GiB / 35 min): different scale AND real-S3 network — apples-to-oranges. The valid contrast is the within-run one above._
 
 **Per-turn detail** (compaction op):
 
 | turn | compact_wall_s | compact_peak_rss_mb | compact_fragments_before | compact_fragments_after | fragments | version | read_p50_ms |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 3.471 | 4807.3 | 168 | 167 | 167 | 170 | 113.68 |
-| 2 | 0.0 | 119.7 | 168 | 168 | 168 | 171 | 114.46 |
-| 3 | 1.222 | 1763.5 | 169 | 168 | 168 | 174 | 116.48 |
-| 4 | 1.986 | 3134.5 | 169 | 168 | 168 | 177 | 111.47 |
-| 5 | 2.792 | 3697.2 | 169 | 168 | 168 | 180 | 115.86 |
+| 1 | 1053.879 | 20741.4 | 501 | 333 | 333 | 669 | 1008.61 |
+| 2 | 5.037 | 1634.4 | 334 | 333 | 333 | 672 | 750.44 |
+| 3 | 7.033 | 2481.1 | 334 | 333 | 333 | 675 | 730.65 |
+| 4 | 9.805 | 3721.3 | 334 | 333 | 333 | 678 | 962.43 |
+| 5 | 11.774 | 4673.4 | 334 | 333 | 333 | 681 | 876.28 |
 | … |  |  |  |  |  |  |  |
-| 46 | 3.578 | 4764.8 | 177 | 176 | 176 | 287 | 117.4 |
-| 47 | 0.0 | 119.9 | 177 | 177 | 177 | 288 | 109.98 |
-| 48 | 1.27 | 1707.9 | 178 | 177 | 177 | 291 | 118.58 |
-| 49 | 2.176 | 3132.8 | 178 | 177 | 177 | 294 | 123.11 |
-| 50 | 2.847 | 3601.0 | 178 | 177 | 177 | 297 | 122.56 |
+| 46 | 0.001 | 139.1 | 342 | 342 | 342 | 786 | 794.82 |
+| 47 | 4.939 | 1639.6 | 343 | 342 | 342 | 789 | 664.57 |
+| 48 | 6.95 | 2661.0 | 343 | 342 | 342 | 792 | 1155.94 |
+| 49 | 8.85 | 3652.2 | 343 | 342 | 342 | 795 | 897.64 |
+| 50 | 10.391 | 4670.3 | 343 | 342 | 342 | 798 | 845.82 |
 
-_Read p50 went 113.68 → 122.56 ms from turn 1 → 50 while versions grew to 297 (cleanup off) — a check on whether accumulating versions slow the read path._
+_Read p50 went 1008.61 → 845.82 ms from turn 1 → 50 while versions grew to 798 (cleanup off) — a check on whether accumulating versions slow the read path._
 
 
 ### Graphs
